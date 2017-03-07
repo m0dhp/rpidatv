@@ -1349,7 +1349,7 @@ do_factory()
   FACTORY=""
   FACTORY=$(whiptail --inputbox "Enter y or n" 8 78 $FACTORY --title "RESET TO INITIAL SETTINGS?" 3>&1 1>&2 2>&3)
   if [ $? -eq 0 ]; then
-    if [ "$FACTORY" == "y" ]; then
+    if [[ "$FACTORY" == "y" || "$FACTORY" == "Y" ]]; then
       mv $PATHSCRIPT"/rpidatvconfig.txt" $PATHSCRIPT"/rpidatvconfig.txt.bak"
       cp $PATHSCRIPT"/configs/rpidatvconfig.txt.factory" $PATHSCRIPT"/rpidatvconfig.txt"
       whiptail --title "Message" --msgbox "Factory Configuration Restored.  Please press enter to continue" 8 78
@@ -1364,7 +1364,7 @@ do_back_up()
   BACKUP=""
   BACKUP=$(whiptail --inputbox "Enter y or n" 8 78 $BACKUP --title "SAVE TO USB? EXISTING FILE WILL BE OVER-WRITTEN" 3>&1 1>&2 2>&3)
   if [ $? -eq 0 ]; then
-    if [ "$BACKUP" == "y" ]; then
+    if [[ "$BACKUP" == "y" || "$BACKUP" == "Y" ]]; then
       ls -l /dev/disk/by-uuid|grep -q sda  # returns 0 if USB drive connected
       if [ $? -eq 0 ]; then
         sudo mv -f /media/usb0/rpidatvconfig.txt /media/usb0/rpidatvconfig.txt.bak >/dev/null 2>/dev/null
@@ -1384,7 +1384,7 @@ do_load_settings()
   BACKUP=""
   BACKUP=$(whiptail --inputbox "Enter y or n" 8 78 $BACKUP --title "LOAD CONFIG FROM USB? EXISTING FILE WILL BE OVER-WRITTEN" 3>&1 1>&2 2>&3)
   if [ $? -eq 0 ]; then
-    if [ "$BACKUP" == "y" ]; then
+    if [[ "$BACKUP" == "y" || "$BACKUP" == "Y" ]]; then
       ls -l /dev/disk/by-uuid|grep -q sda  # returns 0 if USB drive connected
       if [ $? -eq 0 ]; then
         if [ -f /media/usb0/rpidatvconfig.txt ]; then

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Updated by davecrump on 20170209
+# Updated by davecrump on 20170327
 
 # Update the package manager, then install the packages we need
 sudo dpkg --configure -a
@@ -11,7 +11,8 @@ sudo apt-get -y install cmake libusb-1.0-0-dev g++ libx11-dev buffer libjpeg-dev
 sudo apt-get -y install fbi netcat
 
 # rpi-update to get latest firmware
-sudo rpi-update
+# Disabled until rpi-4.9.y kernel issues resolved
+# sudo rpi-update
 cd /home/pi
 
 # Check which source to download.  Default is production

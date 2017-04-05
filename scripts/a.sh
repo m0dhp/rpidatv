@@ -576,6 +576,18 @@ PORT=10000
 
 #============================================ CONTEST =============================================================
   "CONTEST")
+    # Select the right image
+    INT_FREQ_OUTPUT=${FREQ_OUTPUT%.*}
+    if (( $INT_FREQ_OUTPUT \< 100 )); then
+      cp -f /home/pi/rpidatv/scripts/images/contest0.png /home/pi/rpidatv/scripts/images/contest.png
+    elif (( $INT_FREQ_OUTPUT \< 250 )); then
+      cp -f /home/pi/rpidatv/scripts/images/contest1.png /home/pi/rpidatv/scripts/images/contest.png
+    elif (( $INT_FREQ_OUTPUT \< 950 )); then
+      cp -f /home/pi/rpidatv/scripts/images/contest2.png /home/pi/rpidatv/scripts/images/contest.png
+    else
+      cp -f /home/pi/rpidatv/scripts/images/contest3.png /home/pi/rpidatv/scripts/images/contest.png
+    fi
+
     # Display the numbers on the desktop
     #sudo killall -9 fbcp >/dev/null 2>/dev/null
     #fbcp & >/dev/null 2>/dev/null  ## fbcp gets started here and stays running. Not called by a.sh

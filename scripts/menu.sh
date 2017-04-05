@@ -120,6 +120,63 @@ elif [ $RET -eq 0 ]; then
 fi
 }
 
+############### Function to rewrite in-use Contest Numbers Image #########################
+
+do_refresh_numbers()
+{
+  FREQ_OUTPUT=$(get_config_var freqoutput $CONFIGFILE)
+  INT_FREQ_OUTPUT=${FREQ_OUTPUT%.*}
+  LOCATOR=$(get_config_var locator $CONFIGFILE)
+
+  NUMBERS0=$(get_config_var numbers0 $CONFIGFILE)
+  convert -size 480x320 xc:white \
+    -gravity North -pointsize 75 -annotate 0 "$CALL" \
+    -gravity Center -pointsize 150 -annotate 0 "$NUMBERS0" \
+    -gravity South -pointsize 50 -annotate 0 "$LOCATOR""    4 Metres" \
+    /home/pi/rpidatv/scripts/images/contest0.png
+
+  NUMBERS1=$(get_config_var numbers1 $CONFIGFILE)
+  convert -size 480x320 xc:white \
+    -gravity North -pointsize 75 -annotate 0 "$CALL" \
+    -gravity Center -pointsize 150 -annotate 0 "$NUMBERS1" \
+    -gravity South -pointsize 50 -annotate 0 "$LOCATOR""    2 Metres" \
+    /home/pi/rpidatv/scripts/images/contest1.png
+
+  NUMBERS2=$(get_config_var numbers2 $CONFIGFILE)
+  convert -size 480x320 xc:white \
+    -gravity North -pointsize 75 -annotate 0 "$CALL" \
+    -gravity Center -pointsize 150 -annotate 0 "$NUMBERS2" \
+    -gravity South -pointsize 50 -annotate 0 "$LOCATOR""    70 cm" \
+    /home/pi/rpidatv/scripts/images/contest2.png
+
+  NUMBERS3=$(get_config_var numbers3 $CONFIGFILE)
+  convert -size 480x320 xc:white \
+    -gravity North -pointsize 75 -annotate 0 "$CALL" \
+    -gravity Center -pointsize 150 -annotate 0 "$NUMBERS3" \
+    -gravity South -pointsize 50 -annotate 0 "$LOCATOR""    23 cm" \
+    /home/pi/rpidatv/scripts/images/contest3.png
+
+  if (( $INT_FREQ_OUTPUT \< 100 )); then
+    cp -f /home/pi/rpidatv/scripts/images/contest0.png /home/pi/rpidatv/scripts/images/contest.png
+  elif (( $INT_FREQ_OUTPUT \< 250 )); then
+    cp -f /home/pi/rpidatv/scripts/images/contest1.png /home/pi/rpidatv/scripts/images/contest.png
+  elif (( $INT_FREQ_OUTPUT \< 950 )); then
+    cp -f /home/pi/rpidatv/scripts/images/contest2.png /home/pi/rpidatv/scripts/images/contest.png
+  else
+    cp -f /home/pi/rpidatv/scripts/images/contest3.png /home/pi/rpidatv/scripts/images/contest.png
+  fi
+}
+
+############### Function to show in-use Contest Numbers Image #########################
+
+do_show_numbers()
+{
+  sudo fbi -T 1 -noverbose -a /home/pi/rpidatv/scripts/images/contest.png >/dev/null 2>/dev/null
+  (sleep 1; sudo killall -9 fbi >/dev/null 2>/dev/null) &  ## kill fbi once it has done its work
+}
+
+################################### Menus ####################################
+
 do_input_setup()
 {
   MODE_INPUT=$(get_config_var modeinput $CONFIGFILE)
@@ -226,25 +283,36 @@ do_input_setup()
         set_config_var vncaddr "$VNCADDR" $CONFIGFILE
       fi
     ;;
+    CONTEST)
+      do_refresh_numbers
+      do_show_numbers
+    ;;
     esac
     set_config_var modeinput "$chinput" $CONFIGFILE
   fi
 }
 
-do_station_setup() {
-CALL=$(get_config_var call $CONFIGFILE)
-CALL=$(whiptail --inputbox "$StrCallContext" 8 78 $CALL --title "$StrCallTitle" 3>&1 1>&2 2>&3)
-if [ $? -eq 0 ]; then
-set_config_var call "$CALL" $CONFIGFILE
-fi
+do_station_setup()
+{
+  CALL=$(get_config_var call $CONFIGFILE)
+  CALL=$(whiptail --inputbox "$StrCallContext" 8 78 $CALL --title "$StrCallTitle" 3>&1 1>&2 2>&3)
+  if [ $? -eq 0 ]; then
+    set_config_var call "$CALL" $CONFIGFILE
+  fi
 
-LOCATOR=$(get_config_var locator $CONFIGFILE)
-LOCATOR=$(whiptail --inputbox "$StrLocatorContext" 8 78 $LOCATOR --title "$StrLocatorTitle" 3>&1 1>&2 2>&3)
-if [ $? -eq 0 ]; then
-set_config_var locator "$LOCATOR" $CONFIGFILE
-fi
+  LOCATOR=$(get_config_var locator $CONFIGFILE)
+  LOCATOR=$(whiptail --inputbox "$StrLocatorContext" 8 78 $LOCATOR --title "$StrLocatorTitle" 3>&1 1>&2 2>&3)
+  if [ $? -eq 0 ]; then
+    set_config_var locator "$LOCATOR" $CONFIGFILE
+  fi
+
+  do_refresh_numbers
+
+  MODE_INPUT=$(get_config_var modeinput $CONFIGFILE)
+  if [ "$MODE_INPUT" == "CONTEST" ]; then
+    do_show_numbers
+  fi
 }
-
 
 do_output_setup_mode()
 {
@@ -258,7 +326,7 @@ do_output_setup_mode()
   Radio7=OFF
   Radio8=OFF
   case "$MODE_OUTPUT" in
-  IQ) 
+  IQ)
     Radio1=ON
   ;;
   QPSKRF)
@@ -469,12 +537,13 @@ do_PID_setup()
 
 do_freq_setup()
 {
-FREQ_OUTPUT=$(get_config_var freqoutput $CONFIGFILE)
-FREQ=$(whiptail --inputbox "$StrOutputRFFreqContext" 8 78 $FREQ_OUTPUT --title "$StrOutputRFFreqTitle" 3>&1 1>&2 2>&3)
-if [ $? -eq 0 ]; then
-  set_config_var freqoutput "$FREQ" $CONFIGFILE
-  $PATHSCRIPT"/ctlfilter.sh" ## Refresh the band and port switching
-fi
+  FREQ_OUTPUT=$(get_config_var freqoutput $CONFIGFILE)
+  FREQ=$(whiptail --inputbox "$StrOutputRFFreqContext" 8 78 $FREQ_OUTPUT --title "$StrOutputRFFreqTitle" 3>&1 1>&2 2>&3)
+  if [ $? -eq 0 ]; then
+    set_config_var freqoutput "$FREQ" $CONFIGFILE
+    $PATHSCRIPT"/ctlfilter.sh" ## Refresh the band and port switching
+  fi
+  do_refresh_numbers
 }
 
 do_output_setup() {
@@ -1198,52 +1267,32 @@ do_set_express()
 
 do_numbers()
 {
-  whiptail --title "$StrNotImplemented" --msgbox "$StrNotImpMsg" 8 78
-  LOCATOR=$(get_config_var locator $CONFIGFILE)
-
   NUMBERS0=$(get_config_var numbers0 $CONFIGFILE)
   NUMBERS0=$(whiptail --inputbox "Enter 4 digits" 8 78 $NUMBERS0 --title "SET CONTEST NUMBERS FOR THE 71 MHz BAND" 3>&1 1>&2 2>&3)
   if [ $? -eq 0 ]; then
     set_config_var numbers0 "$NUMBERS0" $CONFIGFILE
   fi
-  convert -size 480x320 xc:white \
-    -gravity North -pointsize 75 -annotate 0 "$CALL" \
-    -gravity Center -pointsize 150 -annotate 0 "$NUMBERS0" \
-    -gravity South -pointsize 50 -annotate 0 "$LOCATOR""    4 Metres" \
-    /home/pi/rpidatv/scripts/images/contest0.png
 
   NUMBERS1=$(get_config_var numbers1 $CONFIGFILE)
   NUMBERS1=$(whiptail --inputbox "Enter 4 digits" 8 78 $NUMBERS1 --title "SET CONTEST NUMBERS FOR THE 146 MHz BAND" 3>&1 1>&2 2>&3)
   if [ $? -eq 0 ]; then
     set_config_var numbers1 "$NUMBERS1" $CONFIGFILE
   fi
-  convert -size 480x320 xc:white \
-    -gravity North -pointsize 75 -annotate 0 "$CALL" \
-    -gravity Center -pointsize 150 -annotate 0 "$NUMBERS1" \
-    -gravity South -pointsize 50 -annotate 0 "$LOCATOR""    2 Metres" \
-    /home/pi/rpidatv/scripts/images/contest1.png
 
   NUMBERS2=$(get_config_var numbers2 $CONFIGFILE)
   NUMBERS2=$(whiptail --inputbox "Enter 4 digits" 8 78 $NUMBERS2 --title "SET CONTEST NUMBERS FOR THE 437 MHz BAND" 3>&1 1>&2 2>&3)
   if [ $? -eq 0 ]; then
     set_config_var numbers2 "$NUMBERS2" $CONFIGFILE
   fi
-  convert -size 480x320 xc:white \
-    -gravity North -pointsize 75 -annotate 0 "$CALL" \
-    -gravity Center -pointsize 150 -annotate 0 "$NUMBERS2" \
-    -gravity South -pointsize 50 -annotate 0 "$LOCATOR""    70 cm" \
-    /home/pi/rpidatv/scripts/images/contest2.png
 
   NUMBERS3=$(get_config_var numbers3 $CONFIGFILE)
   NUMBERS3=$(whiptail --inputbox "Enter 4 digits" 8 78 $NUMBERS3 --title "SET CONTEST NUMBERS FOR THE 1255 MHz BAND" 3>&1 1>&2 2>&3)
   if [ $? -eq 0 ]; then
     set_config_var numbers3 "$NUMBERS3" $CONFIGFILE
   fi
-  convert -size 480x320 xc:white \
-    -gravity North -pointsize 75 -annotate 0 "$CALL" \
-    -gravity Center -pointsize 150 -annotate 0 "$NUMBERS3" \
-    -gravity South -pointsize 50 -annotate 0 "$LOCATOR""    23 cm" \
-    /home/pi/rpidatv/scripts/images/contest3.png
+
+  do_refresh_numbers
+  do_show_numbers
 }
 
 do_vfinder()

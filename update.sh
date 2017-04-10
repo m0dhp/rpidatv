@@ -219,7 +219,7 @@ rm -f /home/pi/rpidatvconfig.txt
 rm -f /home/pi/rpidatv/scripts/copy_config.sh
 
 # Install Waveshare 3.5B DTOVERLAY if required (201704080)
-if [ -f /boot/overlays/waveshare35b.dtbo ]; then
+if [ ! -f /boot/overlays/waveshare35b.dtbo ]; then
   sudo cp /home/pi/rpidatv/scripts/waveshare35b.dtbo /boot/overlays/
 fi
 

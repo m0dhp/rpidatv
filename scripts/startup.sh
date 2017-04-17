@@ -89,7 +89,7 @@ fi
 # If a boot session, set up a loop to wait for a valid IP address
 COUNT=0
 if [ "$SESSION_TYPE" == "boot" ]; then
-  COUNT=2 # Increase this value if network is slow
+  COUNT=4 # Increase this value if network is slow
 fi
 
 while [ "$COUNT" -gt 0 ]

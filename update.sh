@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Updated by davecrump 20170416
+# Updated by davecrump 20170520
 
 # Modified to overwrite ~/rpidatv/scripts and
 # ~/rpidatv/src, then compile
-# rpidatv, rpidatv gui avc2ts and adf4351
+# rpidatv, rpidatvgui avc2ts and adf4351
 
 reset
 
@@ -194,10 +194,14 @@ make
 sudo make install
 cd /home/pi
 
-# Update pi-sdn (201702020)
-rm -f /home/pi/pi-sdn
-wget 'https://github.com/philcrump/pi-sdn/releases/download/v1.1/pi-sdn' -O /home/pi/pi-sdn
-chmod +x /home/pi/pi-sdn
+# Update pi-sdn with less trigger-happy version (201705200)
+rm -fr /home/pi/pi-sdn /home/pi/pi-sdn-build/
+git clone https://github.com/philcrump/pi-sdn /home/pi/pi-sdn-build
+cd /home/pi/pi-sdn-build
+make
+mv pi-sdn /home/pi/
+cd /home/pi
+
 # Update the call to pi-sdn if it is enabled (201702020)
 if [ -f /home/pi/.pi-sdn ]; then
   rm -f /home/pi/.pi-sdn

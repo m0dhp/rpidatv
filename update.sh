@@ -69,6 +69,7 @@ if [ "$1" == "-s" ]; then
   cp -f -r rpidatv-batc_staging/src rpidatv
   rm -f rpidatv/video/*.jpg
   cp -f -r rpidatv-batc_staging/video rpidatv
+  cp -f -r rpidatv-batc_staging/version_history.txt rpidatv/version_history.txt
   rm master.zip
   rm -rf rpidatv-batc_staging
 else
@@ -78,6 +79,7 @@ else
   cp -f -r rpidatv-master/src rpidatv
   rm -f rpidatv/video/*.jpg
   cp -f -r rpidatv-master/video rpidatv
+  cp -f -r rpidatv-master/version_history.txt rpidatv/version_history.txt
   rm master.zip
   rm -rf rpidatv-master
 fi

@@ -1,4 +1,4 @@
-201705300
+201705301
 Introduces Touchscreen Menu 2 with shutdown and extra selection buttons
 Enables Contest mode operation from touchscreen
 Touching screen anywhere during Pattern transmission returns unit to standby

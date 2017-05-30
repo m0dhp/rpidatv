@@ -626,6 +626,7 @@ void SelectFec(int NoButton)  // FEC
 void SelectSource(int NoButton,int Status)  //Input mode
 {
 	SelectInGroup(15,19,NoButton,Status);
+        SelectInGroup(Menu1Buttons+15,Menu1Buttons+16,NoButton,Status);
 	strcpy(ModeInput,TabModeInput[NoButton-15]);
 	printf("************** Set Input Mode = %s\n",ModeInput);
 	char Param[]="modeinput";
@@ -648,6 +649,7 @@ void SelectSTD(int NoButton,int Status)  // PAL or NTSC
 
 void SelectOP(int NoButton,int Status)  //Ouput mode
 {
+  SelectInGroup(15,19,NoButton,Status);
   SelectInGroup(Menu1Buttons+10,Menu1Buttons+14,NoButton,Status);
   strcpy(ModeOP,TabModeOP[NoButton-Menu1Buttons-10]);
   printf("************** Set Output Mode = %s\n",ModeOP);
@@ -1092,7 +1094,7 @@ void waituntil(int w,int h)
           {
             SelectFreq(i);
           }
-          if((i>=5)&&(i<=9)) //SR	
+          if((i>=5)&&(i<=9)) //SR
           {
             SelectSR(i);
           }
@@ -1188,7 +1190,6 @@ void waituntil(int w,int h)
           {
             ; // Menu 4 todo
           }
-
           if(i==(Menu1Buttons+5)) // Spare
           {
             ; // Spare todo
@@ -1625,7 +1626,7 @@ void Define_Menu2()
 	Col.r=0;Col.g=128;Col.b=0;
 	AddButtonStatus(button,"  IP  ",&Col);
 
-// Top row, more sources: 		
+// Top row, 2 more sources:
 
 	button=AddButton(0*wbuttonsize+20,hbuttonsize*3+20,wbuttonsize*0.9,hbuttonsize*0.9);
 	Col.r=0;Col.g=0;Col.b=128;
@@ -1727,7 +1728,7 @@ void Start_Highlights_Menu2()
   {
     SelectInGroup(Menu1Buttons+15,Menu1Buttons+16,Menu1Buttons+15,1);
   }
-  if(strcmp(Value,"IPTS")==0)
+  if(strcmp(Value,"IPTSIN")==0)
   {
     SelectInGroup(Menu1Buttons+15,Menu1Buttons+16,Menu1Buttons+16,1);
   }

@@ -647,9 +647,8 @@ void SelectSTD(int NoButton,int Status)  // PAL or NTSC
 	SetConfigParam(PATH_CONFIG,Param,ModeSTD);
 }
 
-void SelectOP(int NoButton,int Status)  //Ouput mode
+void SelectOP(int NoButton,int Status)  //Output mode
 {
-  SelectInGroup(15,19,NoButton,Status);
   SelectInGroup(Menu1Buttons+10,Menu1Buttons+14,NoButton,Status);
   strcpy(ModeOP,TabModeOP[NoButton-Menu1Buttons-10]);
   printf("************** Set Output Mode = %s\n",ModeOP);
@@ -659,11 +658,12 @@ void SelectOP(int NoButton,int Status)  //Ouput mode
 
 void SelectSource2(int NoButton,int Status)  //Input mode
 {
-	SelectInGroup(Menu1Buttons+15,Menu1Buttons+16,NoButton,Status);
-	strcpy(ModeInput,TabModeInput[NoButton-Menu1Buttons-10]);
-	printf("************** Set Input Mode = %s\n",ModeInput);
-	char Param[]="modeinput";
-	SetConfigParam(PATH_CONFIG,Param,ModeInput);
+  SelectInGroup(15,19,NoButton,Status);
+  SelectInGroup(Menu1Buttons+15,Menu1Buttons+16,NoButton,Status);
+  strcpy(ModeInput,TabModeInput[NoButton-Menu1Buttons-10]);
+  printf("************** Set Input Mode = %s\n",ModeInput);
+  char Param[]="modeinput";
+  SetConfigParam(PATH_CONFIG,Param,ModeInput);
 }
 
 void TransmitStart()

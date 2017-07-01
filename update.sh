@@ -66,7 +66,7 @@ fi
 unzip -o master.zip
 
 if [ "$1" == "-s" ]; then
-  # cp -f -r rpidatv-batc_staging/bin rpidatv
+  cp -f -r rpidatv-batc_staging/bin rpidatv
   # cp -f -r rpidatv-batc_staging/doc rpidatv
   cp -f -r rpidatv-batc_staging/scripts rpidatv
   cp -f -r rpidatv-batc_staging/src rpidatv
@@ -76,7 +76,7 @@ if [ "$1" == "-s" ]; then
   rm master.zip
   rm -rf rpidatv-batc_staging
 else
-  # cp -f -r rpidatv-master/bin rpidatv
+  cp -f -r rpidatv-master/bin rpidatv
   # cp -f -r rpidatv-master/doc rpidatv
   cp -f -r rpidatv-master/scripts rpidatv
   cp -f -r rpidatv-master/src rpidatv

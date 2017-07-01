@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Updated by davecrump 20170520
+# Updated by davecrump 20170630
 
 # Modified to overwrite ~/rpidatv/scripts and
 # ~/rpidatv/src, then compile
@@ -36,6 +36,9 @@ sudo apt-get -y dist-upgrade
 
 # Check that ImageMagick is installed (201704050)
 sudo apt-get -y install imagemagick
+
+# Check that libraries required for new ffmpeg are installed (20170630)
+sudo apt-get -y install libvdpau-dev libva-dev
 
 #  Delete the duplicate touchscreen driver if it is still there (201704030)
 cd /boot

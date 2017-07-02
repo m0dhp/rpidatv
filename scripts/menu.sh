@@ -191,6 +191,7 @@ do_input_setup()
   Radio9=OFF
   Radio10=OFF
   Radio11=OFF
+  Radio12=OFF
   case "$MODE_INPUT" in
   CAMH264)
     Radio1=ON
@@ -225,13 +226,16 @@ do_input_setup()
   CONTEST)
     Radio11=ON
   ;;
+  ANALOGMPEG-2)
+    Radio12=ON
+  ;;
   *)
     Radio1=ON
   ;;
   esac
 
   chinput=$(whiptail --title "$StrInputSetupTitle" --radiolist \
-    "$StrInputSetupDescription" 20 78 11 \
+    "$StrInputSetupDescription" 20 78 12 \
     "CAMH264" "$StrInputSetupCAMH264" $Radio1 \
     "CAMMPEG-2" "$StrInputSetupCAMMPEG_2" $Radio2 \
     "FILETS" "$StrInputSetupFILETS" $Radio3\
@@ -242,7 +246,8 @@ do_input_setup()
     "ANALOGCAM" "$StrInputSetupANALOGCAM" $Radio8 \
     "VNC" "$StrInputSetupVNC" $Radio9 \
     "DESKTOP" "$StrInputSetupDESKTOP" $Radio10 \
-    "CONTEST" "$StrInputSetupCONTEST" $Radio11 3>&2 2>&1 1>&3)
+    "CONTEST" "$StrInputSetupCONTEST" $Radio11  \
+    "ANALOGMPEG-2" "Not Implemented Yet" $Radio12 3>&2 2>&1 1>&3)
 
   if [ $? -eq 0 ]; then
     case "$chinput" in
@@ -301,13 +306,6 @@ do_input_setup()
       if [ $? -eq 0 ]; then
          set_config_var analogcamname "$newcamname" $CONFIGFILE
       fi
-
-
-      #ANALOGCAMNAME=$(get_config_var analogcamname $CONFIGFILE)
-      #ANALOGCAMNAME=$(whiptail --inputbox "$StrInputSetupANALOGCAMName" 8 78 $ANALOGCAMNAME --title "$StrInputSetupANALOGCAMTitle" 3>&1 1>&2 2>&3)
-      #if [ $? -eq 0 ]; then
-       # set_config_var analogcamname "$ANALOGCAMNAME" $CONFIGFILE
-      #fi
     ;;
     VNC)
       VNCADDR=$(get_config_var vncaddr $CONFIGFILE)
@@ -554,18 +552,29 @@ fi
 
 do_PID_setup()
 {
-  PID=$(get_config_var pidstart $CONFIGFILE)
-  PID=$(whiptail --inputbox "$StrPIDSetupContext" 8 78 $PID --title "$StrPIDSetupTitle" 3>&1 1>&2 2>&3)
+  PIDPMT=$(get_config_var pidpmt $CONFIGFILE)
+  PIDPMT=$(whiptail --inputbox "$StrPIDSetupContext" 8 78 $PIDPMT --title "$StrPIDSetupTitle" 3>&1 1>&2 2>&3)
   if [ $? -eq 0 ]; then
-    set_config_var pidstart "$PID" $CONFIGFILE
-    set_config_var pidpmt "$PID" $CONFIGFILE
-    #PID Video is PMT+1
-    let PID=PID+1
-    set_config_var pidvideo "$PID" $CONFIGFILE
-    #PID Audio is PMT+1
-    let PID=PID+1
-    set_config_var pidaudio "$PID" $CONFIGFILE
+    set_config_var pidpmt "$PIDPMT" $CONFIGFILE
   fi
+  PIDPCR=$(get_config_var pidstart $CONFIGFILE)
+  PIDPCR=$(whiptail --inputbox "PCR PID - Not Implemented Yet" 8 78 $PIDPCR --title "$StrPIDSetupTitle" 3>&1 1>&2 2>&3)
+  if [ $? -eq 0 ]; then
+    set_config_var pidstart "$PIDPCR" $CONFIGFILE
+  fi
+  PIDVIDEO=$(get_config_var pidvideo $CONFIGFILE)
+  PIDVIDEO=$(whiptail --inputbox "Video PID - Not Implemented Yet" 8 78 $PIDVIDEO --title "$StrPIDSetupTitle" 3>&1 1>&2 2>&3)
+  if [ $? -eq 0 ]; then
+    set_config_var pidvideo "$PIDVIDEO" $CONFIGFILE
+  fi
+  PIDAUDIO=$(get_config_var pidaudio $CONFIGFILE)
+  PIDAUDIO=$(whiptail --inputbox "Audio PID - Not Implemented Yet" 8 78 $PIDAUDIO --title "$StrPIDSetupTitle" 3>&1 1>&2 2>&3)
+  if [ $? -eq 0 ]; then
+    set_config_var pidaudio "$PIDAUDIO" $CONFIGFILE
+  fi
+
+  whiptail --title "PID Selection Check - Not Implemented - Do not use!" \
+    --msgbox "PMT: "$PIDPMT" PCR: "$PIDPCR" Video: "$PIDVIDEO" Audio: "$PIDAUDIO".  Press any key to continue" 8 78
 }
 
 do_freq_setup()

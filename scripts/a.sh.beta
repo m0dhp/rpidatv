@@ -130,11 +130,20 @@ detect_audio()
         AUDIO_CARD=0
       ;;
       *)
-        # Legacy settings for when card detected but not identified
-        AUDIO_CARD=1
-        AUDIO_CARD_NUMBER=1
-        AUDIO_CHANNELS=1
-        AUDIO_SAMPLE=44100
+        # Unidentified selection (may be from old entry in rpidatvconfig.txt) Use auto:
+        if [ "$USBTV" != "9" ] && [ "$MODE_INPUT" == "ANALOGCAM" ]; then
+          AUDIO_CARD=1
+          AUDIO_CARD_NUMBER=$USBTV
+          AUDIO_CHANNELS=2
+          AUDIO_SAMPLE=48000
+        elif [ "$MIC" != "9" ] && [ "$MODE_INPUT" != "ANALOGCAM" ]; then
+          AUDIO_CARD=1
+          AUDIO_CARD_NUMBER=$MIC
+          AUDIO_CHANNELS=1
+          AUDIO_SAMPLE=44100
+        else
+          AUDIO_CARD=0
+        fi
        ;;
       esac
     fi

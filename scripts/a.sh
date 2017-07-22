@@ -251,11 +251,9 @@ detect_video
 ANALOGCAMNAME=$VID_USB
 
 #Adjust the PIDs for non-ffmpeg modes
-#if [ "$MODE_INPUT" != "CAMMPEG-2" ] && [ "$MODE_INPUT" != "ANALOGMPEG-2" ]; then
+if [ "$MODE_INPUT" != "CAMMPEG-2" ] && [ "$MODE_INPUT" != "ANALOGMPEG-2" ]; then
   let PIDPMT=$PIDVIDEO-1
-#fi
-
-
+fi
 
 ######################### Pre-processing for each Output Mode ###############
 
@@ -382,44 +380,45 @@ case "$MODE_OUTPUT" in
 esac
 
 OUTPUT_QPSK="videots"
-
-# ************************ OUTPUT MODE DEFINITION ******************
-#OUTPUT=$OUTPUT_IP
-#OUTPUT=$OUTPUT_QPSK
 #MODE_DEBUG=quiet
 MODE_DEBUG=debug
 
-#BITRATE AVEC 5%
+# ************************ CALCULATE SYMBOL RATES ******************
+
 # BITRATE TS THEORIC
 let BITRATE_TS=SYMBOLRATE*2*188*FECNUM/204/FECDEN
-#let BITRATE_TS=SYMBOLRATE*2*188*FECNUM/204/FECDEN+1000
 
-
-#let BITRATE_VIDEO=(BITRATE_TS*7)/10-72000 audio
-let BITRATE_VIDEO=(BITRATE_TS*75)/100-10000
+# Calculate the Video Bit Rate for Sound/no sound
+if [ "$MODE_INPUT" == "CAMMPEG-2" ] || [ "$MODE_INPUT" == "ANALOGMPEG-2" ]; then
+  let BITRATE_VIDEO=(BITRATE_TS*75)/100-74000
+else
+  let BITRATE_VIDEO=(BITRATE_TS*75)/100-10000
+fi
 
 let SYMBOLRATE_K=SYMBOLRATE/1000
 
-
+# Reduce video resolution at low bit rates
 if [ "$BITRATE_VIDEO" -lt 150000 ]; then
-VIDEO_WIDTH=160
-VIDEO_HEIGHT=140
+  VIDEO_WIDTH=160
+  VIDEO_HEIGHT=140
 else
-	if [ "$BITRATE_VIDEO" -lt 300000 ]; then
-	VIDEO_WIDTH=352
-	VIDEO_HEIGHT=288
-	else
-		VIDEO_WIDTH=720
-		VIDEO_HEIGHT=576
-	fi
+  if [ "$BITRATE_VIDEO" -lt 300000 ]; then
+    VIDEO_WIDTH=352
+    VIDEO_HEIGHT=288
+  else
+    VIDEO_WIDTH=720
+    VIDEO_HEIGHT=576
+  fi
 fi
 
+# Reduce frame rate at low bit rates
 if [ "$BITRATE_VIDEO" -lt 300000 ]; then
-VIDEO_FPS=15
+  VIDEO_FPS=15
 else
-VIDEO_FPS=25
+  VIDEO_FPS=25
 fi
 
+# Clean up before starting fifos
 sudo rm videoes
 sudo rm videots
 sudo rm netfifo
@@ -991,7 +990,7 @@ fi
         -f lavfi -ac 1 \
         -i "sine=frequency=500:beep_factor=4:sample_rate=44100:duration=0" \
         \
-        -c:v mpeg2video -vf "$CAPTION""format=yuva420p" \
+        -c:v mpeg2video -vf "$CAPTION""format=yuva420p, hqdn3d=15" \
         -b:v $BITRATE_VIDEO -minrate:v $BITRATE_VIDEO -maxrate:v  $BITRATE_VIDEO\
         -f mpegts  -blocksize 1880 -acodec mp2 -b:a 64K -ar 44100 -ac $AUDIO_CHANNELS\
         -mpegts_original_network_id 1 -mpegts_transport_stream_id 1 \
@@ -1014,7 +1013,7 @@ fi
         -f alsa -ac $AUDIO_CHANNELS -ar $AUDIO_SAMPLE \
         -i hw:$AUDIO_CARD_NUMBER,0 \
         \
-        -c:v mpeg2video -vf "$CAPTION""format=yuva420p" \
+        -c:v mpeg2video -vf "$CAPTION""format=yuva420p, hqdn3d=15" \
         -b:v $BITRATE_VIDEO -minrate:v $BITRATE_VIDEO -maxrate:v  $BITRATE_VIDEO\
         -f mpegts  -blocksize 1880 -acodec mp2 -b:a 64K -ar 44100 -ac $AUDIO_CHANNELS\
         -mpegts_original_network_id 1 -mpegts_transport_stream_id 1 \
@@ -1028,6 +1027,7 @@ fi
 
 # ============================================ END =============================================================
 
-# Program flow never gets here....
+# flow exits from a.sh leaving ffmpeg or avc2ts and rpidatv running
+# these processes are killed by menu.sh or rpidatvgui on selection of "stop transmit"
 
 esac

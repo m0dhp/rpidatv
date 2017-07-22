@@ -380,8 +380,8 @@ case "$MODE_OUTPUT" in
 esac
 
 OUTPUT_QPSK="videots"
-#MODE_DEBUG=quiet
-MODE_DEBUG=debug
+MODE_DEBUG=quiet
+# MODE_DEBUG=debug
 
 # ************************ CALCULATE SYMBOL RATES ******************
 

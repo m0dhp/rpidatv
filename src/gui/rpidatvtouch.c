@@ -94,7 +94,7 @@ int TabFec[5]={1,2,3,5,7};
 char TabModeInput[8][255]={"CAMMPEG-2","CAMH264","PATERNAUDIO","ANALOGCAM","CARRIER","CONTEST","IPTSIN","ANALOGMPEG-2"};
 char TabFreq[5][255]={"71","146.5","437","1249","1255"};
 char FreqLabel[5][255]={" 71 MHz ","146.5 MHz","437 MHz ","1249 MHz","1255 MHz"};
-char TabModeAudio[3][255]={"usb","auto","video"};
+char TabModeAudio[3][255]={"mic","auto","video"};
 char TabModeSTD[2][255]={"6","0"};
 char TabModeOP[5][255]={"IQ","QPSKRF","DATVEXPRESS","BATC","COMPVID"};
 int Inversed=0;//Display is inversed (Waveshare=1)
@@ -1712,7 +1712,7 @@ void Start_Highlights_Menu2()
   strcpy(Value,"");
   GetConfigParam(PATH_CONFIG,Param,Value);
   printf("Value=%s %s\n",Value,"Audio");
-  if(strcmp(Value,"usb")==0)
+  if(strcmp(Value,"mic")==0)
   {
     SelectInGroup(Menu1Buttons+5,Menu1Buttons+7,Menu1Buttons+5,1);
   }

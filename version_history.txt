@@ -1,3 +1,10 @@
+201707310
+Introduces an early version of Menu 3
+Introduces a configuration information screen accessed from Menu 3
+Checks for the presence of an RTL-SDR before switching to receive.
+Improves the Test Card transmission quality by freezing the viewfinder.
+Adds audio switching for the Grabby EasyCap.
+
 201707222
 Corrects a bug in the audio switching that prevented transmit or streaming
 

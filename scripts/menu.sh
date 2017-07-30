@@ -703,6 +703,13 @@ do_stop_transmit()
 
   # And make sure rpidatv has been stopped (required for brief transmit selections)
   sudo killall -9 rpidatv >/dev/null 2>/dev/null
+
+  # Check that fbcp is running.  If not, restart it.
+  ps -cax | grep 'fbcp' >/dev/null 2>/dev/null
+  RESULT="$?"
+  if [ "$RESULT" -ne 0 ]; then
+   fbcp &
+  fi
 }
 
 do_display_on()

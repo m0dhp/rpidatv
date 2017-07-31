@@ -478,6 +478,50 @@ void GetSerNo(char SerNo[256])
 }
 
 /***************************************************************************//**
+ * @brief Looks up the Audio Devices
+ *
+ * @param DeviceName1 and DeviceName2 (str) First 40 char of device names
+ *
+ * @return void
+*******************************************************************************/
+
+void GetDevices(char DeviceName1[256], char DeviceName2[256])
+{
+  FILE *fp;
+  char arecord_response_line[256];
+  int card = 1;
+
+  /* Open the command for reading. */
+  fp = popen("arecord -l", "r");
+  if (fp == NULL) {
+    printf("Failed to run command\n" );
+    exit(1);
+  }
+
+  /* Read the output a line at a time - output it. */
+  while (fgets(arecord_response_line, 250, fp) != NULL)
+  {
+    if (arecord_response_line[0] == 'c')
+    {
+      if (card == 2)
+      {
+        strcpy(DeviceName2, arecord_response_line);
+        card = card + 1;
+      }
+      if (card == 1)
+      {
+        strcpy(DeviceName1, arecord_response_line);
+        card = card + 1;
+      }
+    }
+    printf("%s", arecord_response_line);
+  }
+  /* close */
+  pclose(fp);
+}
+
+
+/***************************************************************************//**
  * @brief Reads the Presets from rpidatvconfig.txt and formats them for
  *        Display and switching
  *
@@ -1114,17 +1158,15 @@ void TransmitStop()
   // Turn the Viewfinder off
   system("v4l2-ctl --overlay=0 >/dev/null 2>/dev/null");
 
+  // Stop the audio relay in CompVid mode
+  system("sudo killall arecord >/dev/null 2>/dev/null");
+
   // Then pause and make sure that avc2ts has really been stopped (needed at high SRs)
   usleep(1000);
   system("sudo killall -9 avc2ts >/dev/null 2>/dev/null");
 
   // And make sure rpidatv has been stopped (required for brief transmit selections)
   system("sudo killall -9 rpidatv >/dev/null 2>/dev/null");
-
-  // Kill fbcp (if it is running) and restart it
-  system("sudo killall fbcp >/dev/null 2>/dev/null");
-  system("fbcp &");
-
 }
 
 void coordpoint(VGfloat x, VGfloat y, VGfloat size, VGfloat pcolor[4]) {
@@ -1497,6 +1539,12 @@ void InfoScreen()
   GetSerNo(SerNo);
   strcat(CardSerial, SerNo);
 
+  char DeviceTitle[256] = "Audio Devices:";
+
+  char Device1[256]=" ";
+  char Device2[256]=" ";
+  GetDevices(Device1, Device2);
+
   // Initialise and calculate the text display
   init(&wscreen, &hscreen);  // Restart the gui
   BackgroundRGB(0,0,0,255);  // Black background
@@ -1536,6 +1584,15 @@ void InfoScreen()
   linenumber = linenumber + 1.0;
 
   Text(wscreen/12.0, hscreen - linenumber * linepitch, CardSerial, font, pointsize);
+  linenumber = linenumber + 1.0;
+
+  Text(wscreen/12.0, hscreen - linenumber * linepitch, DeviceTitle, font, pointsize);
+  linenumber = linenumber + 1.0;
+
+  Text(wscreen/12.0, hscreen - linenumber * linepitch, Device1, font, pointsize);
+  linenumber = linenumber + 1.0;
+
+  Text(wscreen/12.0, hscreen - linenumber * linepitch, Device2, font, pointsize);
   linenumber = linenumber + 1.0;
 
     tw = TextWidth("Touch Screen to Continue",  font, pointsize);
@@ -2315,7 +2372,7 @@ void Start_Highlights_Menu2()
   {
     SelectInGroup(Menu1Buttons+10,Menu1Buttons+14,Menu1Buttons+13,1);
   }
-  if(strcmp(Value,"IP")==0)
+  if(strcmp(Value,"COMPVID")==0)
   {
     SelectInGroup(Menu1Buttons+10,Menu1Buttons+14,Menu1Buttons+14,1);
   }

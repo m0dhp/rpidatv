@@ -1,7 +1,7 @@
 #! /bin/bash
 # set -x #Uncomment for testing
 
-# Version 201707222
+# Version 201707311
 
 ############# SET GLOBAL VARIABLES ####################
 
@@ -407,8 +407,17 @@ case "$MODE_OUTPUT" in
   ;;
 
   COMPVID)
+    # Temporarily set the symbol rate to something reasonable
+    SYMBOLRATEK=1000
+    let SYMBOLRATE=SYMBOLRATEK*1000
     FREQUENCY_OUT=0
     OUTPUT="/dev/null"
+    # Get the Mic and on-board sound card numbers
+    MICCARD="$(cat /proc/asound/modules | grep 'usb_audio' | head -c 2 | tail -c 1)"
+    RPICARD="$(cat /proc/asound/modules | grep 'bcm2835' | head -c 2 | tail -c 1)"
+    # Pass the USB mic input directly to the RPi Audio Out
+    arecord -D plughw:"$MICCARD",0 -f cd - | aplay -D plughw:"$RPICARD",0 - &
+
   ;;
 
 esac
@@ -722,9 +731,6 @@ fi
 
     $PATHRPI"/tcanim" $PATERNFILE"/*10" "48" "72" "CQ" "CQ CQ CQ DE "$CALL" IN $LOCATOR - DATV $SYMBOLRATEK KS FEC "$FECNUM"/"$FECDEN &
 
-    # Once first test card frame is displayed, kill fbcp because it conflicts with avc2ts
-    (sleep 1; sudo killall -9 fbcp >/dev/null 2>/dev/null) & 
-
   ;;
 
 #============================================ VNC =============================================================
@@ -758,9 +764,6 @@ fi
 
     # Now generate the stream
     $PATHRPI"/avc2ts" -b $BITRATE_VIDEO -m $BITRATE_TS -x $VIDEO_WIDTH -y $VIDEO_HEIGHT -f $VIDEO_FPS -i 100 $OUTPUT_FILE -t 4 -e $VNCADDR -p $PIDPMT -s $CHANNEL $OUTPUT_IP &
-
-    # Once first image is displayed, kill fbcp because it conflicts with avc2ts
-    (sleep 1; sudo killall -9 fbcp >/dev/null 2>/dev/null) & 
 
   ;;
 
@@ -902,9 +905,6 @@ fi
     # Now generate the stream
     $PATHRPI"/avc2ts" -b $BITRATE_VIDEO -m $BITRATE_TS -x $VIDEO_WIDTH -y $VIDEO_HEIGHT -f $VIDEO_FPS -i 100 $OUTPUT_FILE -t 3 -p $PIDPMT -s $CHANNEL $OUTPUT_IP &
 
-    # Once first image is displayed, kill fbcp because it conflicts with avc2ts
-    (sleep 1; sudo killall -9 fbcp >/dev/null 2>/dev/null) & 
-
   ;;
 
 # *********************************** TRANSPORT STREAM INPUT THROUGH IP ******************************************
@@ -1031,10 +1031,7 @@ fi
     $PATHRPI"/avc2ts" -b $BITRATE_VIDEO -m $BITRATE_TS -x $VIDEO_WIDTH -y $VIDEO_HEIGHT \
       -f $VIDEO_FPS -i 100 $OUTPUT_FILE -t 3 -p $PIDPMT -s $CHANNEL $OUTPUT_IP &
 
-    # Once first image is displayed, kill fbcp because it conflicts with avc2ts
-    (sleep 1; sudo killall -9 fbcp >/dev/null 2>/dev/null) & 
-
-  ;;
+   ;;
   #============================================ ANALOG MPEG-2 INPUT MODE =============================================================
   "ANALOGMPEG-2")
 

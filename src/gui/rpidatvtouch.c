@@ -1496,6 +1496,7 @@ void InfoScreen()
   strcat(swversion, result);
 
   char ipaddress[256] = "IP: ";
+  strcpy(result, "Not connected");
   GetIPAddr(result);
   strcat(ipaddress, result);
 

@@ -1624,11 +1624,15 @@ do_TouchScreen()
   /home/pi/rpidatv/bin/rpidatvgui
 }
 
-do_Streamer()
+do_KStreamer()
 {
-  /home/pi/rpidatv/bin/keyedstream
+  /home/pi/rpidatv/bin/keyedstream 1 7
 }
 
+do_CStreamer()
+{
+  /home/pi/rpidatv/bin/keyedstream 0
+}
 
 do_TestRig()
 {
@@ -1652,25 +1656,27 @@ do_DisableButtonSD()
 
 do_shutdown_menu()
 {
-menuchoice=$(whiptail --title "Shutdown Menu" --menu "Select Choice" 16 78 8 \
+menuchoice=$(whiptail --title "Shutdown Menu" --menu "Select Choice" 16 78 9 \
     "1 Shutdown now" "Immediate Shutdown"  \
     "2 Reboot now" "Immediate reboot" \
     "3 Exit to Linux" "Exit menu to Command Prompt" \
     "4 Restore TouchScreen" "Exit to LCD.  Use ctrl-C to return" \
-    "5 Streamer" "Start the keyed Repeater Streamer" \
-    "6 Start Test Rig"  "Test rig for pre-sale testing of FM Boards" \
-    "7 Button Enable" "Enable Shutdown Button" \
-    "7 Button Disable" "Disable Shutdown Button" \
+    "5 Start Keyed Streamer" "Start the keyed Repeater Streamer" \
+    "6 Start Constant Streamer" "Start the constant Repeater Streamer" \
+    "7 Start Test Rig"  "Test rig for pre-sale testing of FM Boards" \
+    "8 Button Enable" "Enable Shutdown Button" \
+    "9 Button Disable" "Disable Shutdown Button" \
       3>&2 2>&1 1>&3)
     case "$menuchoice" in
         1\ *) do_Shutdown ;;
         2\ *) do_Reboot ;;
         3\ *) do_Exit ;;
         4\ *) do_TouchScreen ;;
-        5\ *) do_Streamer ;;
-        6\ *) do_TestRig ;;
-        7\ *) do_EnableButtonSD ;;
-        8\ *) do_DisableButtonSD ;;
+        5\ *) do_KStreamer ;;
+        6\ *) do_CStreamer ;;
+        7\ *) do_TestRig ;;
+        8\ *) do_EnableButtonSD ;;
+        9\ *) do_DisableButtonSD ;;
     esac
 }
 

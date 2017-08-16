@@ -784,7 +784,7 @@ do_autostart_setup()
       Radio7=ON
     ;;
     Cont_Stream_boot)
-      Radio7=ON
+      Radio8=ON
     ;;
     *)
       Radio1=ON

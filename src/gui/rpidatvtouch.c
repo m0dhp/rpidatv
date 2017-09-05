@@ -24,7 +24,6 @@
 #include "shapes.h"
 
 
-
 #include <pthread.h>
 #include <fftw3.h>
 #include <math.h>
@@ -307,6 +306,36 @@ void GetCPUTemp(char CPUTemp[256])
 }
 
 /***************************************************************************//**
+ * @brief Checks the CPU Throttling Status
+ *
+ * @param Throttled (str) Throttle status to be passed as a string
+ *
+ * @return void
+*******************************************************************************/
+
+void GetThrottled(char Throttled[256])
+{
+  FILE *fp;
+
+  /* Open the command for reading. */
+  fp = popen("vcgencmd get_throttled", "r");
+  if (fp == NULL) {
+    printf("Failed to run command\n" );
+    exit(1);
+  }
+
+  /* Read the output a line at a time - output it. */
+  while (fgets(Throttled, 20, fp) != NULL)
+  {
+    printf("%s", Throttled);
+  }
+
+  /* close */
+  pclose(fp);
+}
+
+
+/***************************************************************************//**
  * @brief Reads the input source from rpidatvconfig.txt
  *        and determines coding and video source
  * @param sets strings: coding, source
@@ -478,7 +507,7 @@ void GetSerNo(char SerNo[256])
 }
 
 /***************************************************************************//**
- * @brief Looks up the Audio Devices
+ * @brief Looks up the Audio Input Devices
  *
  * @param DeviceName1 and DeviceName2 (str) First 40 char of device names
  *
@@ -684,6 +713,7 @@ int IsButtonPushed(int NbButton,int x,int y)
   {
     scaledX = shiftX+wscreen-y/(scaleXvalue+factorX);
     scaledY = shiftY+hscreen-x/(scaleYvalue+factorY);
+//    scaledY = shiftY+x/(scaleYvalue+factorY); Vertical flip for 4 inch screen
   }
 
   // printf("x=%d y=%d scaledx %d scaledy %d sxv %f syv %f\n",x,y,scaledX,scaledY,scaleXvalue,scaleYvalue);
@@ -1210,15 +1240,15 @@ void *DisplayFFT(void * arg)
 	}
 	fftwf_free(fftin);
 	fftwf_free(fftout);
+  return NULL;
 }
 
 void *WaitButtonEvent(void * arg)
 {
-	int rawX, rawY, rawPressure;
-
-	while(getTouchSample(&rawX, &rawY, &rawPressure)==0);
-
-	FinishedButton=1;
+  int rawX, rawY, rawPressure;
+  while(getTouchSample(&rawX, &rawY, &rawPressure)==0);
+  FinishedButton=1;
+  return NULL;
 }
 
 void ProcessLeandvb()
@@ -1502,11 +1532,27 @@ void InfoScreen()
 
   char CPUTemp[256];
   GetCPUTemp(result);
-  sprintf(CPUTemp, "CPU temp=%.1f\'C", atoi(result)/1000.0);
-
-  char GPUTemp[256] = "GPU ";
+  sprintf(CPUTemp, "CPU temp=%.1f\'C      GPU ", atoi(result)/1000.0);
   GetGPUTemp(result);
-  strcat(GPUTemp, result);
+  strcat(CPUTemp, result);
+
+  char PowerText[256] = "Temperature has been or is too high";
+  GetThrottled(result);
+  result[strlen(result) - 1]  = '\0';
+  if(strcmp(result,"throttled=0x0")==0)
+  {
+    strcpy(PowerText,"Temperatures and Supply voltage OK");
+  }
+  if(strcmp(result,"throttled=0x50000")==0)
+  {
+    strcpy(PowerText,"Low supply voltage event since start-up");
+  }
+  if(strcmp(result,"throttled=0x50005")==0)
+  {
+    strcpy(PowerText,"Low supply voltage now");
+  }
+  //strcpy(PowerText,result);
+  //strcat(PowerText,"End");
 
   char TXParams1[256] = "TX ";
   GetConfigParam(PATH_CONFIG,"freqoutput",result);
@@ -1572,7 +1618,7 @@ void InfoScreen()
   Text(wscreen/12.0, hscreen - linenumber * linepitch, CPUTemp, font, pointsize);
   linenumber = linenumber + 1.0;
 
-  Text(wscreen/12.0, hscreen - linenumber * linepitch, GPUTemp, font, pointsize);
+  Text(wscreen/12.0, hscreen - linenumber * linepitch, PowerText, font, pointsize);
   linenumber = linenumber + 1.0;
 
   Text(wscreen/12.0, hscreen - linenumber * linepitch, TXParams1, font, pointsize);
@@ -1604,6 +1650,78 @@ void InfoScreen()
 
   printf("Info Screen called and waiting for touch\n");
   wait_touch();
+}
+
+void rtlradio1()
+{
+  if(CheckRTL()==0)
+  {
+    char rtlcall[256];
+    strcpy(rtlcall,"(rtl_fm -M wbfm -f 92.9M | aplay -D plughw:1,0 -f S16_LE -r32) &");
+    system(rtlcall);
+
+    MsgBox("Radio 4 92.9 FM");
+    wait_touch();
+
+    system("sudo killall rtl_fm >/dev/null 2>/dev/null");
+    system("sudo killall aplay >/dev/null 2>/dev/null");
+    usleep(1000);
+    system("sudo killall -9 rtl_fm >/dev/null 2>/dev/null");
+    system("sudo killall -9 aplay >/dev/null 2>/dev/null");
+  }
+  else
+  {
+    MsgBox("No RTL-SDR Connected");
+    wait_touch();
+  }
+}
+
+void rtlradio2()
+{
+  if(CheckRTL()==0)
+  {
+    char rtlcall[256];
+    strcpy(rtlcall,"(rtl_fm -M wbfm -f 106.0M | aplay -D plughw:1,0 -f S16_LE -r32) &");
+    system(rtlcall);
+
+    MsgBox("SAM FM 106.0");
+    wait_touch();
+
+    system("sudo killall rtl_fm >/dev/null 2>/dev/null");
+    system("sudo killall aplay >/dev/null 2>/dev/null");
+    usleep(1000);
+    system("sudo killall -9 rtl_fm >/dev/null 2>/dev/null");
+    system("sudo killall -9 aplay >/dev/null 2>/dev/null");
+  }
+  else
+  {
+    MsgBox("No RTL-SDR Connected");
+    wait_touch();
+  }
+}
+
+void rtlradio3()
+{
+  if(CheckRTL()==0)
+  {
+    char rtlcall[256];
+    strcpy(rtlcall,"(rtl_fm -M fm -f 144.755M -s 20k -g 50 -l 0 -E pad | aplay -D plughw:1,0 -f S16_LE -r20 -t raw) &");
+    system(rtlcall);
+
+    MsgBox("ATV Calling Channel 144.75 MHz FM");
+    wait_touch();
+
+    system("sudo killall rtl_fm >/dev/null 2>/dev/null");
+    system("sudo killall aplay >/dev/null 2>/dev/null");
+    usleep(1000);
+    system("sudo killall -9 rtl_fm >/dev/null 2>/dev/null");
+    system("sudo killall -9 aplay >/dev/null 2>/dev/null");
+  }
+  else
+  {
+    MsgBox("No RTL-SDR Connected");
+    wait_touch();
+  }
 }
 
 void do_snap()
@@ -1950,9 +2068,23 @@ void waituntil(int w,int h)
               Start_Highlights_Menu3();
               UpdateWindow();
           }
-          if((i>=(Menu1Buttons+Menu2Buttons+5))&&(i<=(Menu1Buttons+Menu2Buttons+7))) // Audio Selection
+          if(i==(Menu1Buttons+Menu2Buttons+5)) // 92.9 FM
           {
-            SelectAudio(i,1);
+            rtlradio1();
+            BackgroundRGB(0,0,0,255);
+            UpdateWindow();
+          }
+          if(i==(Menu1Buttons+Menu2Buttons+6)) // 106.0 FM
+          {
+            rtlradio2();
+            BackgroundRGB(0,0,0,255);
+            UpdateWindow();
+          }
+          if(i==(Menu1Buttons+Menu2Buttons+7)) // 144.75 NBFM
+          {
+            rtlradio3();
+            BackgroundRGB(0,0,0,255);
+            UpdateWindow();
           }
           if((i>=(Menu1Buttons+Menu2Buttons+8))&&(i<=(Menu1Buttons+Menu2Buttons+9))) // PAL or NTSC
           {
@@ -2561,22 +2693,21 @@ void Define_Menu3()
 
 	button=AddButton(0*wbuttonsize+20,0+hbuttonsize*1+20,wbuttonsize*0.9,hbuttonsize*0.9);
 	Col.r=0;Col.g=0;Col.b=128;
-	AddButtonStatus(button," ",&Col);
+	AddButtonStatus(button," 92.9 FM",&Col);
 	Col.r=0;Col.g=128;Col.b=0;
-	AddButtonStatus(button," ",&Col);
+	AddButtonStatus(button," 92.9 FM",&Col);
 
 	button=AddButton(1*wbuttonsize+20,hbuttonsize*1+20,wbuttonsize*0.9,hbuttonsize*0.9);
 	Col.r=0;Col.g=0;Col.b=128;
-	AddButtonStatus(button," ",&Col);
+	AddButtonStatus(button,"106.0 FM",&Col);
 	Col.r=0;Col.g=128;Col.b=0;
-	AddButtonStatus(button," ",&Col);
+	AddButtonStatus(button,"106.0 FM",&Col);
 
 	button=AddButton(2*wbuttonsize+20,hbuttonsize*1+20,wbuttonsize*0.9,hbuttonsize*0.9);
 	Col.r=0;Col.g=0;Col.b=128;
-	AddButtonStatus(button,"  ",&Col);
-	//AddButtonStatus(button," No VF ",&Col);
+	AddButtonStatus(button,"144.75 FM",&Col);
 	Col.r=0;Col.g=128;Col.b=0;
-	AddButtonStatus(button,"  ",&Col);
+	AddButtonStatus(button,"144.75 FM",&Col);
 
 	button=AddButton(3*wbuttonsize+20,hbuttonsize*1+20,wbuttonsize*0.9,hbuttonsize*0.9);
 	Col.r=0;Col.g=0;Col.b=128;

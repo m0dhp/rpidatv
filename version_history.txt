@@ -1,3 +1,7 @@
+201708151
+Adds voltage monitor to Info page
+Prototype RTL-FM functions on Menu 3
+
 201708150
 Introduces dedicated streaming mode with hardware on/off switch
 Introduces still capture from composite video

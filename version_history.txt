@@ -1,6 +1,11 @@
-201708151
+201710080
+Include RTL-FM functions on Menu 3
+Add RTL-TCP Server
 Adds voltage monitor to Info page
-Prototype RTL-FM functions on Menu 3
+Re-enable DTX-1 Output for testing
+Experimental support for signal monitoring at 2MS
+Unattended streaming auto restarts after crashes
+Transmission can be initiated and stopped with a GPIO switch
 
 201708150
 Introduces dedicated streaming mode with hardware on/off switch

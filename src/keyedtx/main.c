@@ -14,15 +14,11 @@ char stopCommand1[64];
 _timer_t key_timer;
 time_t rawtime;
 struct tm * timeinfo;
-char previous_hour [8] = "00";
-char hour [8];
 char stream_state [8] = "off";
-char ffmpegPID[256];
 
 void Edge_ISR(void);
 void Start_Function(void);
 void Stop_Function(void);
-void GetffmpegPID(char[256]);
 
 int main( int argc, char *argv[] )
 {
@@ -49,7 +45,7 @@ int main( int argc, char *argv[] )
     {
       if( KeyGPIO == 0 )
       {
-        printf("Streamer always on\n");
+        printf("TX always on\n");
       }
       else
       {
@@ -82,15 +78,15 @@ int main( int argc, char *argv[] )
   else
   {
     printf("ERROR: Incorrect number of parameters!\n");
-    printf(" == keyedstream == Dave Crump <dave.g8gkq@gmail.com ==\n");
+    printf(" == keyedtx == Dave Crump <dave.g8gkq@gmail.com     ==\n");
     printf(" == Based on code from Phil Crump                   ==\n");
-    printf("  usage: keyedstream [x] [y]\n");
-    printf("    x: GPIO to switch streamer on and off (optional)\n");
+    printf("  usage: keyedtx [x] [y]\n");
+    printf("    x: GPIO to switch TX on and off (optional)\n");
     printf("    Use 0 for always on with no keying\n");
     printf("    default is GPIO 1 (pin 12 on the RPi3)\n");
-    printf("    y: GPIO for LED streaming indicator (optional)\n");
+    printf("    y: GPIO for LED transmitting indicator (optional)\n");
     printf("    default is nil, recommended is 7 (pin 7)\n");
-    printf("GPIO high, streamer runs.  GPIO low, streamer stops.\n");
+    printf("GPIO high, Transmitter runs.  GPIO low, transmitter stops.\n");
     printf(" * WiringPi GPIO pin numbers are used. (0-20)\n");
     printf("    http://wiringpi.com/pins/\n");
     return 0;
@@ -105,7 +101,7 @@ int main( int argc, char *argv[] )
   /* Set up commands in buffers */
   snprintf(sdnCommand,32,"shutdown -h now");
   snprintf(startCommand,64,"sudo /home/pi/rpidatv/scripts/a.sh >/dev/null 2>/dev/null");
-  snprintf(stopCommand1,64,"sudo killall ffmpeg >/dev/null 2>/dev/null");
+  snprintf(stopCommand1,64,"sudo /home/pi/rpidatv/scripts/b.sh 2>/dev/null");
     
   if(KeyGPIO > 0)
   {
@@ -119,7 +115,7 @@ int main( int argc, char *argv[] )
       digitalWrite(IndicationGPIO, LOW);
     }
 
-    printf("Starting keyed streamer ....\n");
+    printf("Starting keyed transmitter ....\n");
     printf("Use ctrl-C to exit \n");
 
     /* Trigger EdgeISR on any change */
@@ -128,7 +124,7 @@ int main( int argc, char *argv[] )
     /* Set initial state */
     if(digitalRead(KeyGPIO) == HIGH)
     {
-      /* Turn the stream on */
+      /* Turn the transmitter on */
       Start_Function();
       if(IndicationGPIO >= 0)
       {
@@ -138,52 +134,19 @@ int main( int argc, char *argv[] )
   }
   else
   {
-    /* Start the always-on stream */
-    printf("Starting Always on streamer ....\n");
+    /* Start the always-on transmitter */
+    printf("Starting Always on transmitter ....\n");
     printf("Use ctrl-C to exit \n");
     Start_Function();
   }
 
   /* Now wait here for interrupts - forever! */
-  /* But stop/start the stream at 0300Z and 1500Z each day */
     
   /* Spin loop while waiting for interrupt */
-  /* Check time for 12 hour restart        */
-  /* and check process still running if    */
-  /* required every 10 seconds             */
 
   while(1)
   {
     delay(10000);
-    time ( &rawtime );
-    timeinfo = gmtime ( &rawtime );
-    strftime (hour, 8, "%I", timeinfo);
-
-    if (strcmp(previous_hour, "02") == 0 && strcmp(hour, "03") == 0)
-    {
-      /* 3am or 3 pm, so stop and restart stream to zero delays */
-      if (strcmp(stream_state, "on") == 0)
-      {
-        Stop_Function();
-        delay(5000);
-        Start_Function();
-        printf("Stream restarted at %s o'clock", hour);
-      }
-      else
-      {
-        Stop_Function();
-      }
-    }
-    strcpy(previous_hour, hour);
-    if (strcmp(stream_state, "on") == 0)
-    {
-      GetffmpegPID(ffmpegPID);
-      if (atoi(ffmpegPID) < 1)  // ffmpeg not running when it should be
-      {
-        Start_Function();
-        printf("after crashing in the hour after %s o'clock\n", hour);
-      }
-    }
   }
   return 0;
 }
@@ -198,7 +161,7 @@ void Edge_ISR(void)
     /* Reset the timer in case it's already running */
     timer_reset(&key_timer);
 
-    /* Set timer to start stream on completion*/
+    /* Set timer to start transmit on completion*/
     timer_set(&key_timer, 100, Start_Function);
   }
   else
@@ -206,14 +169,14 @@ void Edge_ISR(void)
      /* Reset the timer in case it's already running */
     timer_reset(&key_timer);
 
-    /* Set timer to stop stream on completion*/
+    /* Set timer to stop transmit on completion*/
     timer_set(&key_timer, 100, Stop_Function);
   }
 }
 
 void Start_Function(void)
 {
-  /* Start the stream */
+  /* Start the transmission */
   system(startCommand);
     
   if(IndicationGPIO >= 0)
@@ -221,13 +184,13 @@ void Start_Function(void)
     digitalWrite(IndicationGPIO, HIGH);
   }
   strcpy(stream_state, "on");  
-  printf("Starting stream\n");
+  printf("Starting transmission\n");
 
 }
 
 void Stop_Function(void)
 {
-  /* Stop the stream */
+  /* Stop the transmission */
   system(stopCommand1);
 
   if(IndicationGPIO >= 0)
@@ -235,23 +198,5 @@ void Stop_Function(void)
     digitalWrite(IndicationGPIO, LOW);
   }
   strcpy(stream_state, "off");  
-  printf("Stopping stream\n");
+  printf("Stopping transmission\n");
 }
-
-/* GetffmpegPID returns a parameter that is a character string of the ffmpeg PID */
-/* Parameter is 0 if ffmpeg not running */
-void GetffmpegPID(char ffmpegPID[256])
-{
-  FILE *fp;
-  /* Open the command for reading. */
-  fp = popen("pgrep ffmpeg", "r");
-  strcpy(ffmpegPID,"0");
-  /* Read the output a line at a time - output it. */
-  while (fgets(ffmpegPID, 7, fp) != NULL)
-  {
-    sprintf(ffmpegPID, "%d", atoi(ffmpegPID));
-  }
-  /* close */
-  pclose(fp);
-}
-

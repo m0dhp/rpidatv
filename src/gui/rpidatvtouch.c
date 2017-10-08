@@ -5,9 +5,7 @@
 #include <linux/input.h>
 #include <string.h>
 
-
 #include "touch.h"
-
 
 #include <signal.h>
 
@@ -23,10 +21,10 @@
 #include "fontinfo.h"
 #include "shapes.h"
 
-
 #include <pthread.h>
 #include <fftw3.h>
 #include <math.h>
+#include "siggen.h"
 
 #define KWHT  "\x1B[37m"
 #define KYEL  "\x1B[33m"
@@ -40,11 +38,9 @@ float scaleXvalue, scaleYvalue; // Coeff ratio from Screen/TouchArea
 int wbuttonsize;
 int hbuttonsize;
 
-
 typedef struct {
 	int r,g,b;
 } color_t;
-
 
 typedef struct {
 	char Text[255];
@@ -54,7 +50,6 @@ typedef struct {
 #define MAX_STATUS 10
 typedef struct {
 	int x,y,w,h;
-
 	status_t Status[MAX_STATUS];
 	int IndexStatus;
 	int NoStatus;
@@ -191,6 +186,36 @@ void SetConfigParam(char *PathConfigFile,char *Param,char *Value)
 
 
 /***************************************************************************//**
+ * @brief Looks up the card number for the RPi Audio Card
+ *
+ * @param card (str) as a single character string with no <CR>
+ *
+ * @return void
+*******************************************************************************/
+
+void GetPiAudioCard(char card[256])
+{
+  FILE *fp;
+
+  /* Open the command for reading. */
+  fp = popen("aplay -l | grep bcm2835 | head -1 | cut -c6-6", "r");
+  if (fp == NULL) {
+    printf("Failed to run command\n" );
+    exit(1);
+  }
+
+  /* Read the output a line at a time - output it. */
+  while (fgets(card, 7, fp) != NULL)
+  {
+    sprintf(card, "%d", atoi(card));
+  }
+
+  /* close */
+  pclose(fp);
+}
+
+
+/***************************************************************************//**
  * @brief Looks up the current IPV4 address
  *
  * @param IPAddress (str) IP Address to be passed as a string
@@ -203,14 +228,15 @@ void GetIPAddr(char IPAddress[256])
   FILE *fp;
 
   /* Open the command for reading. */
-  fp = popen("ifconfig | grep -Eo \'inet (addr:)?([0-9]*\\.){3}[0-9]*\' | grep -Eo \'([0-9]*\\.){3}[0-9]*\' | grep -v \'127.0.0.1\'", "r");
+  fp = popen("ifconfig | grep -Eo \'inet (addr:)?([0-9]*\\.){3}[0-9]*\' | grep -Eo \'([0-9]*\\.){3}[0-9]*\' | grep -v \'127.0.0.1\' | head -1", "r");
   if (fp == NULL) {
     printf("Failed to run command\n" );
     exit(1);
   }
 
   /* Read the output a line at a time - output it. */
-  while (fgets(IPAddress, 16, fp) != NULL) {
+  while (fgets(IPAddress, 16, fp) != NULL)
+  {
     //printf("%s", IPAddress);
   }
 
@@ -1461,16 +1487,23 @@ void ProcessLeandvb()
 	free(line);
 	line=NULL;
     }
-printf("End Lean - Clean\n");
+  printf("End Lean - Clean\n");
+  system("sudo killall rtl_sdr >/dev/null 2>/dev/null");
+  system("sudo killall fbi >/dev/null 2>/dev/null");  // kill any previous images
+  system("sudo fbi -T 1 -noverbose -a /home/pi/rpidatv/scripts/images/BATC_Black.png");  // Add logo image
 
-system("sudo killall fbi");  // kill any previous images
-system("sudo fbi -T 1 -noverbose -a /home/pi/rpidatv/scripts/images/BATC_Black.png");  // Add logo image
-
-usleep(5000000); // Time to FFT end reading samples
-   pthread_join(thfft, NULL);
+  usleep(5000000); // Time to FFT end reading samples
+  pthread_join(thfft, NULL);
 	//pclose(fp);
 	pthread_join(thbutton, NULL);
 	printf("End Lean\n");
+ 
+  system("sudo killall hello_video.bin >/dev/null 2>/dev/null");
+  system("sudo killall fbi >/dev/null 2>/dev/null");
+  system("sudo killall leandvb >/dev/null 2>/dev/null");
+  system("sudo killall ts2es >/dev/null 2>/dev/null");
+
+
 }
 
 void ReceiveStart()
@@ -1483,6 +1516,8 @@ void ReceiveStop()
 {
   system("sudo killall leandvb >/dev/null 2>/dev/null");
   system("sudo killall hello_video.bin >/dev/null 2>/dev/null");
+	printf("Receive Stop\n");
+
 }
 
 
@@ -1504,17 +1539,53 @@ void wait_touch()
 
 void MsgBox(const char *message)
 {
-  init(&wscreen, &hscreen);  // Restart the gui
+  //init(&wscreen, &hscreen);  // Restart the gui
   BackgroundRGB(0,0,0,255);  // Black background
   Fill(255, 255, 255, 1);    // White text
 
-  TextMid(wscreen/2, hscreen/2, message, SerifTypeface, 25);
+  TextMid(wscreen/2, hscreen/2, message, SansTypeface, 25);
 
-  VGfloat tw = TextWidth("Touch Screen to Continue", SerifTypeface, 25);
-  Text(wscreen / 2.0 - (tw / 2.0), 20, "Touch Screen to Continue", SerifTypeface, 25);
+  VGfloat tw = TextWidth("Touch Screen to Continue", SansTypeface, 25);
+  Text(wscreen / 2.0 - (tw / 2.0), 20, "Touch Screen to Continue", SansTypeface, 25);
   End();
   printf("MsgBox called and waiting for touch\n");
 }
+
+void MsgBox2(const char *message1, const char *message2)
+{
+  //init(&wscreen, &hscreen);  // Restart the gui
+  BackgroundRGB(0,0,0,255);  // Black background
+  Fill(255, 255, 255, 1);    // White text
+
+  VGfloat th = TextHeight(SansTypeface, 25);
+
+
+  TextMid(wscreen/2, hscreen/2+th, message1, SansTypeface, 25);
+  TextMid(wscreen/2, hscreen/2-th, message2, SansTypeface, 25);
+
+  VGfloat tw = TextWidth("Touch Screen to Continue", SansTypeface, 25);
+  Text(wscreen / 2.0 - (tw / 2.0), 20, "Touch Screen to Continue", SerifTypeface, 25);
+  End();
+  printf("MsgBox2 called and waiting for touch\n");
+}
+
+void MsgBox4(const char *message1, const char *message2, const char *message3, const char *message4)
+{
+  //init(&wscreen, &hscreen);  // Restart the gui
+  BackgroundRGB(0,0,0,255);  // Black background
+  Fill(255, 255, 255, 1);    // White text
+
+  VGfloat th = TextHeight(SansTypeface, 25);
+
+  TextMid(wscreen/2, hscreen/2 + 2.1 * th, message1, SansTypeface, 25);
+  TextMid(wscreen/2, hscreen/2 + 0.7 * th, message2, SansTypeface, 25);
+  TextMid(wscreen/2, hscreen/2 - 0.7 * th, message3, SansTypeface, 25);
+  TextMid(wscreen/2, hscreen/2 - 2.1 * th, message4, SansTypeface, 25);
+
+  End();
+  printf("MsgBox4 called and waiting for touch\n");
+}
+
 
 void InfoScreen()
 {
@@ -1657,7 +1728,11 @@ void rtlradio1()
   if(CheckRTL()==0)
   {
     char rtlcall[256];
-    strcpy(rtlcall,"(rtl_fm -M wbfm -f 92.9M | aplay -D plughw:1,0 -f S16_LE -r32) &");
+    char card[256];
+    GetPiAudioCard(card);
+    strcpy(rtlcall, "(rtl_fm -M wbfm -f 92.9M | aplay -D plughw:");
+    strcat(rtlcall, card);
+    strcat(rtlcall, ",0 -f S16_LE -r32) &");
     system(rtlcall);
 
     MsgBox("Radio 4 92.9 FM");
@@ -1681,7 +1756,11 @@ void rtlradio2()
   if(CheckRTL()==0)
   {
     char rtlcall[256];
-    strcpy(rtlcall,"(rtl_fm -M wbfm -f 106.0M | aplay -D plughw:1,0 -f S16_LE -r32) &");
+    char card[256];
+    GetPiAudioCard(card);
+    strcpy(rtlcall, "(rtl_fm -M wbfm -f 106.0M | aplay -D plughw:");
+    strcat(rtlcall, card);
+    strcat(rtlcall, ",0 -f S16_LE -r32) &");
     system(rtlcall);
 
     MsgBox("SAM FM 106.0");
@@ -1705,7 +1784,11 @@ void rtlradio3()
   if(CheckRTL()==0)
   {
     char rtlcall[256];
-    strcpy(rtlcall,"(rtl_fm -M fm -f 144.755M -s 20k -g 50 -l 0 -E pad | aplay -D plughw:1,0 -f S16_LE -r20 -t raw) &");
+    char card[256];
+    GetPiAudioCard(card);
+    strcpy(rtlcall, "(rtl_fm -M fm -f 144.75M -s 20k -g 50 -l 0 -E pad | aplay -D plughw:");
+    strcat(rtlcall, card);
+    strcat(rtlcall, ",0 -f S16_LE -r20 -t raw) &");
     system(rtlcall);
 
     MsgBox("ATV Calling Channel 144.75 MHz FM");
@@ -1716,6 +1799,96 @@ void rtlradio3()
     usleep(1000);
     system("sudo killall -9 rtl_fm >/dev/null 2>/dev/null");
     system("sudo killall -9 aplay >/dev/null 2>/dev/null");
+  }
+  else
+  {
+    MsgBox("No RTL-SDR Connected");
+    wait_touch();
+  }
+}
+void rtlradio4()
+{
+  if(CheckRTL()==0)
+  {
+    char rtlcall[256];
+    char card[256];
+    GetPiAudioCard(card);
+    strcpy(rtlcall, "(rtl_fm -M fm -f 145.7875M -s 20k -g 50 -l 0 -E pad | aplay -D plughw:");
+    strcat(rtlcall, card);
+    strcat(rtlcall, ",0 -f S16_LE -r20 -t raw) &");
+    system(rtlcall);
+
+    MsgBox("GB3BF Bedford 145.7875");
+    wait_touch();
+
+    system("sudo killall rtl_fm >/dev/null 2>/dev/null");
+    system("sudo killall aplay >/dev/null 2>/dev/null");
+    usleep(1000);
+    system("sudo killall -9 rtl_fm >/dev/null 2>/dev/null");
+    system("sudo killall -9 aplay >/dev/null 2>/dev/null");
+  }
+  else
+  {
+    MsgBox("No RTL-SDR Connected");
+    wait_touch();
+  }
+}
+
+void rtlradio5()
+{
+  if(CheckRTL()==0)
+  {
+    char rtlcall[256];
+    char card[256];
+    GetPiAudioCard(card);
+    strcpy(rtlcall, "(rtl_fm -M fm -f 145.8M -s 20k -g 50 -l 0 -E pad | aplay -D plughw:");
+    strcat(rtlcall, card);
+    strcat(rtlcall, ",0 -f S16_LE -r20 -t raw) &");
+    system(rtlcall);
+
+    MsgBox("ISS Downlink 145.8 MHz FM");
+    wait_touch();
+
+    system("sudo killall rtl_fm >/dev/null 2>/dev/null");
+    system("sudo killall aplay >/dev/null 2>/dev/null");
+    usleep(1000);
+    system("sudo killall -9 rtl_fm >/dev/null 2>/dev/null");
+    system("sudo killall -9 aplay >/dev/null 2>/dev/null");
+  }
+  else
+  {
+    MsgBox("No RTL-SDR Connected");
+    wait_touch();
+  }
+}
+
+void rtl_tcp()
+{
+  if(CheckRTL()==0)
+  {
+    char rtl_tcp_start[256];
+    char current_IP[256];
+    char message1[256];
+    char message2[256];
+    char message3[256];
+    char message4[256];
+    GetIPAddr(current_IP);
+    strcpy(rtl_tcp_start,"(rtl_tcp -a ");
+    strcat(rtl_tcp_start, current_IP);
+    strcat(rtl_tcp_start, ") &");
+    system(rtl_tcp_start);
+
+    strcpy(message1, "RTL-TCP server running on");
+    strcpy(message2, current_IP);
+    strcat(message2, ":1234");
+    strcpy(message3, "Touch screen again to");
+    strcpy(message4, "stop the RTL-TCP Server");
+    MsgBox4(message1, message2, message3, message4);
+    wait_touch();
+
+    system("sudo killall rtl_tcp >/dev/null 2>/dev/null");
+    usleep(500);
+    system("sudo killall -9 rtl_tcp >/dev/null 2>/dev/null");
   }
   else
   {
@@ -1910,16 +2083,18 @@ void waituntil(int w,int h)
             {
               if(CheckRTL()==0)
               {
-              printf("DISPLAY OFF \n");
-              BackgroundRGB(0,0,0,255);
-              ReceiveStart();
-              BackgroundRGB(255,255,255,255);
-              IsDisplayOn=1;
+                printf("DISPLAY OFF \n");
+                BackgroundRGB(0,0,0,255);
+                Start(wscreen,hscreen);
 
-              SelectPTT(20,0);
-              SelectPTT(21,0);
-              UpdateWindow();
-              IsDisplayOn=1;
+                ReceiveStart();
+                BackgroundRGB(255,255,255,255);
+                IsDisplayOn=1;
+                UpdateWindow();
+                SelectPTT(20,0);
+                SelectPTT(21,0);
+                UpdateWindow();
+                IsDisplayOn=1;
               }
               else
               {
@@ -2054,20 +2229,18 @@ void waituntil(int w,int h)
             BackgroundRGB(0,0,0,255);
             UpdateWindow();
           }
-          if(i==(Menu1Buttons+Menu2Buttons+3)) // Caption on/off
+          if(i==(Menu1Buttons+Menu2Buttons+3)) // Start RTL-TCP
           {
-              //SelectCaption(i,1);
-              UpdateWindow();
+            rtl_tcp();
+            BackgroundRGB(0,0,0,255);
+            UpdateWindow();
           }
-          if(i==(Menu1Buttons+Menu2Buttons+4)) // Menu 3
+          if(i==(Menu1Buttons+Menu2Buttons+4)) // 
           {
-              printf("MENU 3 \n");
-              CurrentMenu=3;
-              BackgroundRGB(0,0,0,255);
-
-              Start_Highlights_Menu3();
-              UpdateWindow();
-          }
+            siggenmain();
+            BackgroundRGB(0,0,0,255);
+            UpdateWindow();
+           }
           if(i==(Menu1Buttons+Menu2Buttons+5)) // 92.9 FM
           {
             rtlradio1();
@@ -2086,13 +2259,21 @@ void waituntil(int w,int h)
             BackgroundRGB(0,0,0,255);
             UpdateWindow();
           }
-          if((i>=(Menu1Buttons+Menu2Buttons+8))&&(i<=(Menu1Buttons+Menu2Buttons+9))) // PAL or NTSC
+          if(i==(Menu1Buttons+Menu2Buttons+8)) // GB3BF
           {
-            SelectSTD(i,1);
+            rtlradio4();
+            BackgroundRGB(0,0,0,255);
+            UpdateWindow();
           }
-            if((i>=(Menu1Buttons+Menu2Buttons+10))&&(i<=(Menu1Buttons+Menu2Buttons+14))) // Select Output Mode
+          if(i==(Menu1Buttons+Menu2Buttons+9)) // 145.8 NBFM
           {
-            SelectOP(i,1);
+            rtlradio5();
+            BackgroundRGB(0,0,0,255);
+            UpdateWindow();
+          }
+            if((i>=(Menu1Buttons+Menu2Buttons+10))&&(i<=(Menu1Buttons+Menu2Buttons+14))) // Spare
+          {
+            UpdateWindow();
           }
           if(i==(Menu1Buttons+Menu2Buttons+15)) // Snap
           {
@@ -2654,7 +2835,7 @@ void Start_Highlights_Menu2()
 void Define_Menu3()
 {
   Menu3Buttons=21;
-  // Bottom row: Shutdown, Reboot, Info, Spare, Spare (Menu4?)
+  // Bottom row: Shutdown, Reboot, Info, rtl-tcp, siggen (Menu4?)
 
 	int button=AddButton(0*wbuttonsize+20,0+hbuttonsize*0+20,wbuttonsize*0.9,hbuttonsize*0.9);
 	color_t Col;
@@ -2678,16 +2859,15 @@ void Define_Menu3()
 
 	button=AddButton(3*wbuttonsize+20,hbuttonsize*0+20,wbuttonsize*0.9,hbuttonsize*0.9);
 	Col.r=0;Col.g=0;Col.b=128;
-	AddButtonStatus(button," ",&Col);
+	AddButtonStatus(button,"RTL-TCP",&Col);
 	Col.r=0;Col.g=128;Col.b=0;
-	AddButtonStatus(button," ",&Col);
+	AddButtonStatus(button,"RTL-TCP",&Col);
 
 	button=AddButton(4*wbuttonsize+20,hbuttonsize*0+20,wbuttonsize*0.9,hbuttonsize*0.9);
 	Col.r=0;Col.g=0;Col.b=128;
 	AddButtonStatus(button," ",&Col);
-	//AddButtonStatus(button," Menu 3",&Col);
 	Col.r=0;Col.g=128;Col.b=0;
-	AddButtonStatus(button," Menu 3",&Col);
+	AddButtonStatus(button," ",&Col);
 
 // 2nd row up: Audio Mic, Audio Auto, Audio EC, PAL In, NTSC In
 
@@ -2711,15 +2891,15 @@ void Define_Menu3()
 
 	button=AddButton(3*wbuttonsize+20,hbuttonsize*1+20,wbuttonsize*0.9,hbuttonsize*0.9);
 	Col.r=0;Col.g=0;Col.b=128;
-	AddButtonStatus(button," ",&Col);
+	AddButtonStatus(button," GB3BF ",&Col);
 	Col.r=0;Col.g=128;Col.b=0;
-	AddButtonStatus(button," ",&Col);
+	AddButtonStatus(button," GB3BF ",&Col);
 
 	button=AddButton(4*wbuttonsize+20,hbuttonsize*1+20,wbuttonsize*0.9,hbuttonsize*0.9);
 	Col.r=0;Col.g=0;Col.b=128;
-	AddButtonStatus(button," ",&Col);
+	AddButtonStatus(button,"145.8 FM ",&Col);
 	Col.r=0;Col.g=128;Col.b=0;
-	AddButtonStatus(button," ",&Col);
+	AddButtonStatus(button,"145.8 FM ",&Col);
 
 // 3rd row up: Output to: IQ, Ugly, Express, BATC, COMPVID
 
@@ -2808,6 +2988,7 @@ static void
 terminate(int dummy)
 {
   TransmitStop();
+  ReceiveStop();
   printf("Terminate\n");
   char Commnd[255];
   sprintf(Commnd,"stty echo");

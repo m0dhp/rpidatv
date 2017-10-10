@@ -575,6 +575,44 @@ void GetDevices(char DeviceName1[256], char DeviceName2[256])
   pclose(fp);
 }
 
+/***************************************************************************//**
+ * @brief Looks up the USB Video Input Device address
+ *
+ * @param DeviceName1 and DeviceName2 (str) First 40 char of device names
+ *
+ * @return void
+*******************************************************************************/
+
+void GetUSBVidDev(char VidDevName[256])
+{
+  FILE *fp;
+  char response_line[256];
+
+  /* Open the command for reading. */
+  fp = popen("v4l2-ctl --list-devices 2> /dev/null | sed -n '/usb/,/dev/p' | grep 'dev' | tr -d '\t'", "r");
+  if (fp == NULL)
+  {
+    printf("Failed to run command\n" );
+    exit(1);
+  }
+
+  /* Read the output a line at a time - output it. */
+  while (fgets(response_line, 250, fp) != NULL)
+  {
+    if (strlen(response_line) <= 1)
+    {
+        strcpy(VidDevName, "nil");
+    }
+    else
+    {
+      strcpy(VidDevName, response_line);
+    }
+  }
+
+  /* close */
+  pclose(fp);
+}
+
 
 /***************************************************************************//**
  * @brief Reads the Presets from rpidatvconfig.txt and formats them for
@@ -1899,50 +1937,103 @@ void rtl_tcp()
 
 void do_snap()
 {
-  IsDisplayOn=0;
-  finish();
-  printf("do_snap\n");
-  system("/home/pi/rpidatv/scripts/snap.sh >/dev/null 2>/dev/null");
-  wait_touch();
-  system("sudo killall fbi >/dev/null 2>/dev/null");  // kill any previous images
-  system("sudo fbi -T 1 -noverbose -a /home/pi/rpidatv/scripts/images/BATC_Black.png  >/dev/null 2>/dev/null");  // Add logo image
-  init(&wscreen, &hscreen);
-  Start(wscreen,hscreen);
-  BackgroundRGB(0,0,0,255);
-  IsDisplayOn=1;
-  UpdateWindow();
+  char USBVidDevice[255];
+
+  GetUSBVidDev(USBVidDevice);
+  if (strlen(USBVidDevice) != 12)  // /dev/video* with a new line
+  {
+    MsgBox("No EasyCap Found");
+    wait_touch();
+    UpdateWindow();
+    BackgroundRGB(0,0,0,255);
+  }
+  else
+  {
+    IsDisplayOn=0;
+    finish();
+    printf("do_snap\n");
+    system("/home/pi/rpidatv/scripts/snap.sh >/dev/null 2>/dev/null");
+    wait_touch();
+    system("sudo killall fbi >/dev/null 2>/dev/null");  // kill any previous images
+    system("sudo fbi -T 1 -noverbose -a /home/pi/rpidatv/scripts/images/BATC_Black.png  >/dev/null 2>/dev/null");  // Add logo image
+    init(&wscreen, &hscreen);
+    Start(wscreen,hscreen);
+    BackgroundRGB(0,0,0,255);
+    IsDisplayOn=1;
+    UpdateWindow();
+    system("sudo killall fbi >/dev/null 2>/dev/null");  // kill fbi now
+  }
 }
 
 void do_videoview()
 {
   printf("videoview called\n");
+  char Param[255];
+  char Value[255];
+  char USBVidDevice[255];
+  char ffmpegCMD[255];
 
-  // Make the display ready
-  IsDisplayOn=0;
-  finish();
-
-  // Create a thread to listen for display touches
-  pthread_create (&thview,NULL, &WaitButtonEvent,NULL);
-
-  // Refresh image until display touched
-  while ( FinishedButton == 0 )
+  GetUSBVidDev(USBVidDevice);
+  if (strlen(USBVidDevice) != 12)  // /dev/video* with a new line
   {
-    system("/home/pi/rpidatv/scripts/view.sh");
-    usleep(100000);
+    MsgBox("No EasyCap Found");
+    wait_touch();
+    UpdateWindow();
+    BackgroundRGB(0,0,0,255);
   }
+  else
+  {
+    // Make the display ready
+    IsDisplayOn=0;
+    finish();
 
-  // Screen has been touched
-  printf("videoview exit\n");
+    // Create a thread to listen for display touches
+    pthread_create (&thview,NULL, &WaitButtonEvent,NULL);
 
-  // Tidy up and display touch menu
-  FinishedButton = 0;
-  system("sudo killall fbi >/dev/null 2>/dev/null");  // kill any previous images
-  system("sudo fbi -T 1 -noverbose -a /home/pi/rpidatv/scripts/images/BATC_Black.png  >/dev/null 2>/dev/null");  // Add logo image
-  init(&wscreen, &hscreen);
-  Start(wscreen,hscreen);
-  BackgroundRGB(0,0,0,255);
-  IsDisplayOn=1;
-  UpdateWindow();
+    strcpy(Param,"display");
+    GetConfigParam(PATH_CONFIG,Param,Value);
+    if(strcmp(Value,"Waveshare")==0)
+    // Write directly to the touchscreen framebuffer for Waveshare displays
+    {
+      USBVidDevice[strcspn(USBVidDevice, "\n")] = 0;  //remove the newline
+      strcpy(ffmpegCMD, "/home/pi/rpidatv/bin/ffmpeg -hide_banner -loglevel panic -f v4l2 -i ");
+      strcat(ffmpegCMD, USBVidDevice);
+      strcat(ffmpegCMD, " -vf \"yadif=0:1:0,scale=480:320\" -f rawvideo -pix_fmt rgb565 -vframes 3 /home/pi/tmp/frame.raw");
+      system("sudo killall fbcp");
+      // Refresh image until display touched
+      while ( FinishedButton == 0 )
+      {
+        system("sudo rm /home/pi/tmp/* >/dev/null 2>/dev/null");
+        system(ffmpegCMD);
+        system("split -b 307200 -d -a 1 /home/pi/tmp/frame.raw /home/pi/tmp/frame");
+        system("cat /home/pi/tmp/frame2>/dev/fb1");
+      }
+      // Screen has been touched so stop and tidy up
+      system("fbcp &");
+      system("sudo rm /home/pi/tmp/* >/dev/null 2>/dev/null");
+    }
+    else  // not a waveshare display so write to the main framebuffer
+    {
+      while ( FinishedButton == 0 )
+      {
+        system("/home/pi/rpidatv/scripts/view.sh");
+        usleep(100000);
+      }
+    }
+    // Screen has been touched
+    printf("videoview exit\n");
+
+    // Tidy up and display touch menu
+    FinishedButton = 0;
+    system("sudo killall fbi >/dev/null 2>/dev/null");  // kill any previous images
+    system("sudo fbi -T 1 -noverbose -a /home/pi/rpidatv/scripts/images/BATC_Black.png  >/dev/null 2>/dev/null");  // Add logo image
+    init(&wscreen, &hscreen);
+    Start(wscreen,hscreen);
+    BackgroundRGB(0,0,0,255);
+    IsDisplayOn=1;
+    UpdateWindow();
+    system("sudo killall fbi >/dev/null 2>/dev/null");  // kill fbi now
+  }
 }
 
 void do_snapcheck()
@@ -3000,61 +3091,62 @@ terminate(int dummy)
 
 // main initializes the system and shows the picture. 
 
-int main(int argc, char **argv) {
-	int NoDeviceEvent=0;
-	saveterm();
-	init(&wscreen, &hscreen);
-	rawterm();
-	int screenXmax, screenXmin;
-	int screenYmax, screenYmin;
-	int ReceiveDirect=0;
-	int i, STD;
-        char Param[255];
-        char Value[255];
+int main(int argc, char **argv)
+{
+  int NoDeviceEvent=0;
+  saveterm();
+  init(&wscreen, &hscreen);
+  rawterm();
+  int screenXmax, screenXmin;
+  int screenYmax, screenYmin;
+  int ReceiveDirect=0;
+  int i;
+  char Param[255];
+  char Value[255];
+  char USBVidDevice[255];
+  char SetStandard[255];
  
-// Catch sigaction and call terminate
-	for (i = 0; i < 16; i++) {
-		struct sigaction sa;
+  // Catch sigaction and call terminate
+  for (i = 0; i < 16; i++)
+  {
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = terminate;
+    sigaction(i, &sa, NULL);
+  }
 
-		memset(&sa, 0, sizeof(sa));
-		sa.sa_handler = terminate;
-		sigaction(i, &sa, NULL);
-	}
-
-// Determine if using waveshare or waveshare B screen
-// Either by first argument or from rpidatvconfig.txt
-	if(argc>1)
-		Inversed=atoi(argv[1]);
-        strcpy(Param,"display");
-
-        GetConfigParam(PATH_CONFIG,Param,Value);
-        if(strcmp(Value,"Waveshare")==0)
-        	Inversed=1;
-        if(strcmp(Value,"WaveshareB")==0)
-                Inversed=1;
+  // Determine if using waveshare or waveshare B screen
+  // Either by first argument or from rpidatvconfig.txt
+  if(argc>1)
+    Inversed=atoi(argv[1]);
+  strcpy(Param,"display");
+  GetConfigParam(PATH_CONFIG,Param,Value);
+  if(strcmp(Value,"Waveshare")==0)
+    Inversed=1;
+  if(strcmp(Value,"WaveshareB")==0)
+    Inversed=1;
 
   // Set the Band (and filter) Switching
   system ("sudo /home/pi/rpidatv/scripts/ctlfilter.sh");
   // and wait for it to finish using rpidatvconfig.txt
   usleep(100000);
 
-// Set the Analog Capture Standard
-
-  strcpy(Param,"analogcamstandard");
-  GetConfigParam(PATH_CONFIG,Param,Value);
-  STD=atoi(Value);
-  printf("Value=%s %s\n",Value,"Video Standard");
-  if ( STD == 6 ) //PAL
+  // Set the Analog Capture Standard
+  GetUSBVidDev(USBVidDevice);
+  if (strlen(USBVidDevice) == 12)  // /dev/video* with a new line
   {
-    system("v4l2-ctl -d /dev/video1 --set-standard=6");
-  }
-  else if ( STD == 0 ) //NTSC
-  {
-    system("v4l2-ctl -d /dev/video1 --set-standard=0");
+    strcpy(Param,"analogcamstandard");
+    GetConfigParam(PATH_CONFIG,Param,Value);
+    USBVidDevice[strcspn(USBVidDevice, "\n")] = 0;  //remove the newline
+    strcpy(SetStandard, "v4l2-ctl -d ");
+    strcat(SetStandard, USBVidDevice);
+    strcat(SetStandard, " --set-standard=");
+    strcat(SetStandard, Value);
+    printf(SetStandard);
+    system(SetStandard);
   }
 
-
-// Determine if ReceiveDirect 2nd argument 
+  // Determine if ReceiveDirect 2nd argument 
 	if(argc>2)
 		ReceiveDirect=atoi(argv[2]);
 

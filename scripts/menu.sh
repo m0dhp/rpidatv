@@ -880,6 +880,7 @@ do_display_setup()
   ;;
   *)
     Radio1=ON
+  ;;		
   esac
 
   chdisplay=$(whiptail --title "$StrDisplaySetupTitle" --radiolist \

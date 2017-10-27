@@ -1,3 +1,9 @@
+201710280
+Introduces an early version of the Signal Generator
+Adds a DTX-1 Output Select button on Touchscreen Menu 2
+Increases the 1255 MHz band ADF4351 output to max (level 3)
+Adds compilation scripts for users in ~/rpidatv/scripts/utils
+
 201710081
 Include RTL-FM functions on Menu 3
 Add RTL-TCP Server

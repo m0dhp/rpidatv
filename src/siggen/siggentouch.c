@@ -117,6 +117,11 @@ int CalPoints;
 
 int8_t BandLSBGPIO = 31;
 int8_t BandMSBGPIO = 24;
+int8_t FiltLSBGPIO = 27;
+int8_t FiltNSBGPIO = 25;
+int8_t FiltMSBGPIO = 28;
+int8_t I_GPIO = 26;
+int8_t Q_GPIO = 23;
 
 pthread_t thfft,thbutton,thview;
 
@@ -806,10 +811,24 @@ void AdjustLevel(int Button)
 
 void SetBandGPIOs()
 {
+  // Set Band GPIos high (for 1255) and filter and IQ low 
+  // for max output and repeatability
+
   pinMode(BandLSBGPIO, OUTPUT);
   pinMode(BandMSBGPIO, OUTPUT);
+  pinMode(FiltLSBGPIO, OUTPUT);
+  pinMode(FiltNSBGPIO, OUTPUT);
+  pinMode(FiltMSBGPIO, OUTPUT);
+  pinMode(I_GPIO, OUTPUT);
+  pinMode(Q_GPIO, OUTPUT);
+
   digitalWrite(BandLSBGPIO, HIGH);
   digitalWrite(BandMSBGPIO, HIGH);
+  digitalWrite(FiltLSBGPIO, LOW);
+  digitalWrite(FiltNSBGPIO, LOW);
+  digitalWrite(FiltMSBGPIO, LOW);
+  digitalWrite(I_GPIO, LOW);
+  digitalWrite(Q_GPIO, LOW);
 }
 
 int mymillis()
@@ -1110,7 +1129,7 @@ void ImposeBounds()  // Constrain DisplayFreq to physical limits
 
   if (strcmp(osctxt, "portsdown")==0)
   {
-    SourceUpperFreq = 4294967295LL;
+    SourceUpperFreq = 1500000000;
     SourceLowerFreq = 54000000;
   }
 
@@ -1122,7 +1141,7 @@ void ImposeBounds()  // Constrain DisplayFreq to physical limits
 
   if (strcmp(osctxt, "adf5355")==0)
   {
-    SourceUpperFreq = 13600000000;
+    SourceUpperFreq = 13600000000LL;
     SourceLowerFreq = 54000000;
   }
 

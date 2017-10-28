@@ -1124,13 +1124,13 @@ void ImposeBounds()  // Constrain DisplayFreq to physical limits
   if (strcmp(osctxt, "adf4351")==0)
   {
     SourceUpperFreq = 4294967295LL;
-    SourceLowerFreq = 54000000;
+    SourceLowerFreq = 34375000;
   }
 
   if (strcmp(osctxt, "portsdown")==0)
   {
     SourceUpperFreq = 1500000000;
-    SourceLowerFreq = 54000000;
+    SourceLowerFreq = 50000000;
   }
 
   if (strcmp(osctxt, "express")==0)

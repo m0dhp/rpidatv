@@ -712,14 +712,7 @@ void CalcOPLevel()
 
   if (strcmp(osctxt, "adf4351")==0)
   {
-    if (DisplayFreq < 2200000000LL) 
-    {
-      DisplayLevel = DisplayLevel + 30 * level;
-    }
-    else
-    {
-      DisplayLevel = DisplayLevel + 25 * level;
-    }
+    DisplayLevel = DisplayLevel + 30 * level;
   }
 
   if (strcmp(osctxt, "portsdown")==0)
@@ -1124,7 +1117,7 @@ void ImposeBounds()  // Constrain DisplayFreq to physical limits
   if (strcmp(osctxt, "adf4351")==0)
   {
     SourceUpperFreq = 4294967295LL;
-    SourceLowerFreq = 34375000;
+    SourceLowerFreq = 35000000;
   }
 
   if (strcmp(osctxt, "portsdown")==0)

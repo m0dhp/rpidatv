@@ -296,10 +296,10 @@ make
 sudo make install
 cd /home/pi
 
-# Restore the user's original siggencal.txt if required (201710280)
-if [ -f "/home/pi/siggencal.txt" ]; then
-  cp -f -r /home/pi/siggencal.txt /home/pi/rpidatv/src/siggen/siggencal.txt
-fi
+# Restore the user's original siggencal.txt if required (uncomment after 201710280)
+#if [ -f "/home/pi/siggencal.txt" ]; then
+#  cp -f -r /home/pi/siggencal.txt /home/pi/rpidatv/src/siggen/siggencal.txt
+#fi
 
 # Update the version number
 rm -rf /home/pi/rpidatv/scripts/installed_version.txt

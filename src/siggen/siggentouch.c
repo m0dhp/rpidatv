@@ -1986,9 +1986,9 @@ void Define_Menu1()
 
         button=AddButton(4*wbuttonsize+20,hbuttonsize*4+20,wbuttonsize*0.9,hbuttonsize*1.2);
         Col.r=0;Col.g=0;Col.b=128;
-        AddButtonStatus(button,"Set Freq",&Col);
+        AddButtonStatus(button,"Freq",&Col);
         Col.r=0;Col.g=128;Col.b=0;
-        AddButtonStatus(button,"Set Freq",&Col);
+        AddButtonStatus(button,"Freq",&Col);
 }
 
 void Define_Menu2()
@@ -1999,19 +1999,19 @@ void Define_Menu2()
   int button=AddButton(1*swbuttonsize+20,0+shbuttonsize*0+20,swbuttonsize*0.9,shbuttonsize*0.9);
   color_t Col;
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(2*swbuttonsize+20,shbuttonsize*0+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(3.2*swbuttonsize+20,shbuttonsize*0+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
@@ -2033,19 +2033,19 @@ void Define_Menu2()
 
   button=AddButton(1*swbuttonsize+20,0+shbuttonsize*2+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(2*swbuttonsize+20,shbuttonsize*2+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(3.2*swbuttonsize+20,shbuttonsize*2+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
@@ -2053,67 +2053,67 @@ void Define_Menu2()
 
   button=AddButton(0.4*swbuttonsize+20,0+shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(1.4*swbuttonsize+20,shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(2.6*swbuttonsize+20,shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(3.6*swbuttonsize+20,0+shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(4.6*swbuttonsize+20,shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(5.8*swbuttonsize+20,shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(6.8*swbuttonsize+20,0+shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(7.8*swbuttonsize+20,shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(9*swbuttonsize+20,shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(10*swbuttonsize+20,0+shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(11*swbuttonsize+20,shbuttonsize*3.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," _ ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
@@ -2122,67 +2122,67 @@ void Define_Menu2()
 
   button=AddButton(0.4*swbuttonsize+20,0+shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(1.4*swbuttonsize+20,shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(2.6*swbuttonsize+20,shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(3.6*swbuttonsize+20,0+shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(4.6*swbuttonsize+20,shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(5.8*swbuttonsize+20,shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(6.8*swbuttonsize+20,shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(7.8*swbuttonsize+20,shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(9*swbuttonsize+20,0+shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(10*swbuttonsize+20,shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 
   button=AddButton(11*swbuttonsize+20,shbuttonsize*5.5+20,swbuttonsize*0.9,shbuttonsize*0.9);
   Col.r=0;Col.g=0;Col.b=128;
-  AddButtonStatus(button," ",&Col);
+  AddButtonStatus(button," + ",&Col);
   Col.r=0;Col.g=0;Col.b=0;
   AddButtonStatus(button," ",&Col);
 

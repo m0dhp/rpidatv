@@ -284,11 +284,6 @@ if [ ! -d /home/pi/snaps ]; then
   echo "0" > /home/pi/snaps/snap_index.txt
 fi
 
-# Increase the ADF4351 output to max on 1255 and 2400 MHz (201710280)
-cd /home/pi/rpidatv/scripts
-sed -i 's/^adflevel3.*/adflevel3=3/' rpidatvconfig.txt
-cd /home/pi
-
 # Compile the Signal Generator (201710280)
 cd /home/pi/rpidatv/src/siggen
 make clean

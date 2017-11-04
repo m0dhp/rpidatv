@@ -1,3 +1,8 @@
+201711030
+Adds Touchscreen Calibration
+Enables Boot to SigGen on
+Adds Display mode for upside down Waveshare 4
+
 201710280
 Introduces an early version of the Signal Generator
 Adds a DTX-1 Output Select button on Touchscreen Menu 2

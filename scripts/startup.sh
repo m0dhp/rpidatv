@@ -52,6 +52,20 @@ RESULT="$?"
 if [ "$RESULT" -eq 0 ]; then
   if [ "$SESSION_TYPE" == "ssh" ]; then
     killall rpidatvgui
+    killall siggen
+    /home/pi/rpidatv/scripts/menu.sh menu
+  fi
+  return
+fi
+
+# If SigGen is already running and this is an ssh session
+# stop the SigGen, start the menu and return
+ps -cax | grep 'siggen' >/dev/null 2>/dev/null
+RESULT="$?"
+if [ "$RESULT" -eq 0 ]; then
+  if [ "$SESSION_TYPE" == "ssh" ]; then
+    killall rpidatvgui
+    killall siggen
     /home/pi/rpidatv/scripts/menu.sh menu
   fi
   return
@@ -221,6 +235,13 @@ case "$MODE_STARTUP" in
     # Start the Switched transmitter with the default GPIO Pins
     if [ "$SESSION_TYPE" == "boot" ]; then
       /home/pi/rpidatv/bin/keyedtx 1 7
+    fi
+    return
+  ;;
+  SigGen_boot)
+    # Start the Sig Gen with the output on
+    if [ "$SESSION_TYPE" == "boot" ]; then
+      /home/pi/rpidatv/bin/siggen on
     fi
     return
   ;;

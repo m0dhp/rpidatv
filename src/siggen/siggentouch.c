@@ -1238,7 +1238,7 @@ void InitOsc()
   strcat(Param, "points");
   GetConfigParam(PATH_CAL,Param,Value);
   CalPoints = atoi(Value);
-  printf("CalPoints= %d \n", CalPoints);
+  //printf("CalPoints= %d \n", CalPoints);
   for ( n = 1; n <= CalPoints; n = n + 1 )
   {
     snprintf(PointNumber, 4, "%d", n);
@@ -1248,14 +1248,14 @@ void InitOsc()
     strcat(Param, PointNumber);
     GetConfigParam(PATH_CAL,Param,Value);
     CalFreq[n] = strtoull(Value, 0, 0);
-    printf("CalFreq= %lld \n", CalFreq[n]);
+    //printf("CalFreq= %lld \n", CalFreq[n]);
 
     strcpy(Param, osctxt);
     strcat(Param, "lev");
     strcat(Param, PointNumber);
     GetConfigParam(PATH_CAL,Param,Value);
     CalLevel[n] = atoi(Value);
-    printf("CalLevel= %d \n", CalLevel[n]);
+    //printf("CalLevel= %d \n", CalLevel[n]);
   }
 
   // Hide unused buttons
@@ -1441,14 +1441,12 @@ void SelectMod(int NoButton,int Status)  // Modulation on or off
 void OscStart()
 {
   //  Look up which oscillator we are using
-
   // Then use an if statement for each alternative
 
   printf("Oscillator Start\n");
   char StartPortsdown[256] = "sudo /home/pi/rpidatv/bin/adf4351 ";
   char transfer[256];
-  //char osc[256]="portsdown";
-  float freqmhz;
+  double freqmhz;
   int adf4351_lev = level; // 0 to 3
 
   if (strcmp(osctxt, "audio")==0)
@@ -1463,7 +1461,8 @@ void OscStart()
 
   if (strcmp(osctxt, "adf4351")==0)
   {
-    freqmhz=DisplayFreq/1000000;
+    freqmhz=(double)DisplayFreq/1000000;
+    printf("Demanded Frequency = %.6f\n", freqmhz);
     snprintf(transfer, 13, "%.6f", freqmhz);
     strcat(StartPortsdown, transfer);
     strcat(StartPortsdown, " ");
@@ -1478,8 +1477,7 @@ void OscStart()
 
   if (strcmp(osctxt, "portsdown")==0)
   {
-    // Add code to select the band to 23cms here
-    freqmhz=DisplayFreq/1000000;
+    freqmhz=(double)DisplayFreq/1000000;
     snprintf(transfer, 13, "%.6f", freqmhz);
     strcat(StartPortsdown, transfer);
     strcat(StartPortsdown, " ");
@@ -1773,6 +1771,7 @@ void waituntil(int w,int h)
           }
           if(i==15) // Exit to Portsdown
           {
+            OscStop();
             printf("Exiting Sig Gen \n");
             ExitSignal=1;
             BackgroundRGB(255,255,255,255);
@@ -1878,6 +1877,7 @@ void waituntil(int w,int h)
           }
           if(i==(Menu1Buttons+32)) // Exit to Portsdown
           {
+            OscStop();
             printf("Exiting Sig Gen \n");
             ExitSignal=1;
             BackgroundRGB(255,255,255,255);
@@ -2292,14 +2292,15 @@ terminate(int dummy)
 int main(int argc, char **argv)
 {
   int NoDeviceEvent=0;
-  saveterm();
-  init(&wscreen, &hscreen);
-  rawterm();
   int screenXmax, screenXmin;
   int screenYmax, screenYmin;
   int i;
   char Param[255];
   char Value[255];
+
+  saveterm();
+  init(&wscreen, &hscreen);
+  rawterm();
 
   // Catch sigaction and call terminate
   for (i = 0; i < 16; i++)
@@ -2420,7 +2421,7 @@ int main(int argc, char **argv)
 
   // Program flow only gets here when exit button pushed
   // Start the Portsdown DATV TX and exit
-  system("(/home/pi/rpidatv/bin/rpidatvgui) &");
+  system("(sleep .5 && /home/pi/rpidatv/bin/rpidatvgui) &");
 
   //Tidy up the terminal
   char Commnd[255];

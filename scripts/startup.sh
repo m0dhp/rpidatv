@@ -51,8 +51,8 @@ ps -cax | grep 'rpidatvgui' >/dev/null 2>/dev/null
 RESULT="$?"
 if [ "$RESULT" -eq 0 ]; then
   if [ "$SESSION_TYPE" == "ssh" ]; then
-    killall rpidatvgui
-    killall siggen
+    killall rpidatvgui >/dev/null 2>/dev/null
+    killall siggen >/dev/null 2>/dev/null
     /home/pi/rpidatv/scripts/menu.sh menu
   fi
   return
@@ -64,8 +64,8 @@ ps -cax | grep 'siggen' >/dev/null 2>/dev/null
 RESULT="$?"
 if [ "$RESULT" -eq 0 ]; then
   if [ "$SESSION_TYPE" == "ssh" ]; then
-    killall rpidatvgui
-    killall siggen
+    killall rpidatvgui >/dev/null 2>/dev/null
+    killall siggen >/dev/null 2>/dev/null
     /home/pi/rpidatv/scripts/menu.sh menu
   fi
   return

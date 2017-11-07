@@ -805,7 +805,7 @@ void touchcal()
   char Param[255];                 // Parameter name for writing to Calibration File
   char Value[255];                 // Value for writing to Calibration File
 
-  MsgBox4("Portsdown Touchscreen Calibration", " ", "Touch the screen on each cross", "Screen will be recalibrated after 8 touches");
+  MsgBox4("TOUCHSCREEN CALIBRATION", "Touch the screen on each cross", "Screen will be recalibrated after 8 touches", "Touch screen to start");
   wait_touch();
 
   for (n = 1; n < 9; n = n + 1 )
@@ -863,6 +863,9 @@ void touchcal()
     {
       if (scaledY < hscreen/2)  // gross error
       {
+        StrokeWidth(0);
+        MsgBox4("Last touch was too far", "from the cross", "Touch Screen to continue", "and then try again");
+        wait_touch();
         return;
       }
       higherY = higherY + scaledY;
@@ -871,6 +874,9 @@ void touchcal()
     {
      if (scaledY > hscreen/2)  // gross error
       {
+        StrokeWidth(0);
+        MsgBox4("Last touch was too far", "from the cross", "Touch Screen to continue", "and then try again");
+        wait_touch();
         return;
       }
       lowerY = lowerY + scaledY;
@@ -879,6 +885,9 @@ void touchcal()
     {
      if (scaledX < wscreen/2)  // gross error
       {
+        StrokeWidth(0);
+        MsgBox4("Last touch was too far", "from the cross", "Touch Screen to continue", "and then try again");
+        wait_touch();
         return;
       }
       rightX = rightX + scaledX;
@@ -887,6 +896,9 @@ void touchcal()
     {
      if (scaledX > wscreen/2)  // gross error
       {
+        StrokeWidth(0);
+        MsgBox4("Last touch was too far", "from the cross", "Touch Screen to continue", "and then try again");
+        wait_touch();
         return;
       }
       leftX = leftX + scaledX;
@@ -2613,7 +2625,7 @@ void waituntil(int w,int h)
           if(i==(Menu1Buttons+Menu2Buttons+4)) // Start Sig Gen and Exit
           {
             finish();
-            system("(/home/pi/rpidatv/bin/siggen) &");
+            system("(sleep .5 && /home/pi/rpidatv/bin/siggen) &");
             char Commnd[255];
             sprintf(Commnd,"stty echo");
             system(Commnd);

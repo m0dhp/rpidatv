@@ -1406,8 +1406,8 @@ void SelectSource(int NoButton,int Status)  //Input mode
   char Param[]="modeinput";
   SetConfigParam(PATH_CONFIG,Param,ModeInput);
 
-  // Load the Pi Cam driver for CAMMPEG-2 mode
-  if(strcmp(ModeInput,"CAMMPEG-2")==0)
+  // Load the Pi Cam driver for CAMMPEG-2 modes
+  if((strcmp(ModeInput,"CAMMPEG-2")==0)||(strcmp(ModeInput,"CAMHDMPEG-2")==0))
   {
     system("sudo modprobe bcm2835_v4l2");
   }
@@ -1488,6 +1488,15 @@ void SelectSource2(int NoButton,int Status)  //Input mode
   printf("************** Menu 2 Set Input Mode = %s\n",ModeInput);
   char Param[]="modeinput";
   SetConfigParam(PATH_CONFIG,Param,ModeInput);
+
+  // Load the Pi Cam driver for CAMMPEG-2 modes
+  if((strcmp(ModeInput,"CAMMPEG-2")==0)||(strcmp(ModeInput,"CAMHDMPEG-2")==0))
+  {
+    system("sudo modprobe bcm2835_v4l2");
+  }
+  // Replace Contest Numbers with BATC Logo
+  system("sudo fbi -T 1 -noverbose -a \"/home/pi/rpidatv/scripts/images/BATC_Black.png\" >/dev/null 2>/dev/null");
+  system("(sleep 1; sudo killall -9 fbi >/dev/null 2>/dev/null) &");
 }
 
 void TransmitStart()
@@ -3562,11 +3571,15 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-// Calculate screen parameters
-	scaleXvalue = ((float)screenXmax-screenXmin) / wscreen;
-	printf ("X Scale Factor = %f\n", scaleXvalue);
-	scaleYvalue = ((float)screenYmax-screenYmin) / hscreen;
-	printf ("Y Scale Factor = %f\n", scaleYvalue);
+  // Replace BATC Logo with IP address with BATC Logo alone
+  system("sudo fbi -T 1 -noverbose -a \"/home/pi/rpidatv/scripts/images/BATC_Black.png\" >/dev/null 2>/dev/null");
+  system("(sleep 1; sudo killall -9 fbi >/dev/null 2>/dev/null) &");
+
+  // Calculate screen parameters
+  scaleXvalue = ((float)screenXmax-screenXmin) / wscreen;
+  printf ("X Scale Factor = %f\n", scaleXvalue);
+  scaleYvalue = ((float)screenYmax-screenYmin) / hscreen;
+  printf ("Y Scale Factor = %f\n", scaleYvalue);
 
   // Define button grid
   // -25 keeps right hand side symmetrical with left hand side

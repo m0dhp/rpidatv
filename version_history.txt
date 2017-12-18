@@ -1,3 +1,11 @@
+201712180
+Complete rewrite of touchscreen touch response function
+Adds Menu Titles
+Adds Switchable 480p Output in some modes
+Fixes "Oversize test cards in Carousel"
+Enables IPTS input to DATV Express Output
+Disables option to turn the Viewfinder Off 
+
 201711270
 Adds CARDMPEG-2 and CAMHDMPEG-2 modes
 Properly scales PiCam MPEG-2 viewfinder for all resolutions

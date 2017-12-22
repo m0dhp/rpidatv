@@ -1,7 +1,7 @@
 #! /bin/bash
 # set -x #Uncomment for testing
 
-# Version 201712180
+# Version 201712181
 
 ############# SET GLOBAL VARIABLES ####################
 
@@ -272,6 +272,7 @@ VNCADDR=$(get_config_var vncaddr $CONFIGFILE)
 AUDIO_PREF=$(get_config_var audio $CONFIGFILE)
 CAPTIONON=$(get_config_var caption $CONFIGFILE)
 OPSTD=$(get_config_var outputstandard $CONFIGFILE)
+LOCATOR=$(get_config_var locator $CONFIGFILE)
 
 OUTPUT_IP=""
 
@@ -560,16 +561,29 @@ case "$MODE_INPUT" in
   "CAMMPEG-2"|"CAMHDMPEG-2")
 
 # Set up the command for the MPEG-2 Callsign caption
-
 # Note that spaces are not allowed in the CAPTION string below!
-if [ "$CAPTIONON" == "on" ]; then
-  CAPTION="drawtext=fontfile=/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf:\
+
+# Put caption at the bottom of the screen with locator for US users
+if [ "$IMAGE_HEIGHT" == "480" ]; then
+  if [ "$CAPTIONON" == "on" ]; then
+    CAPTION="drawtext=fontfile=/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf:\
+text=$CALL-$LOCATOR:fontcolor=white:fontsize=36:box=1:boxcolor=black@0.5:boxborderw=5:\
+x=(w/2-(text_w/2)):y=(h-text_h-40)"
+    VF="-vf "
+  else
+    CAPTION=""
+    VF=""    
+  fi
+else
+  if [ "$CAPTIONON" == "on" ]; then
+    CAPTION="drawtext=fontfile=/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf:\
 text=$CALL:fontcolor=white:fontsize=36:box=1:boxcolor=black@0.5:boxborderw=5:\
 x=(w/2-w/8-text_w)/2:y=(h/4-text_h)/2"
-  VF="-vf "
-else
-  CAPTION=""
-  VF=""    
+    VF="-vf "
+  else
+    CAPTION=""
+    VF=""    
+  fi
 fi
 
     # Size the viewfinder and load the Camera driver
@@ -1063,12 +1077,24 @@ fi
     v4l2-ctl --overlay=0
 
     # Set up the command for the MPEG-2 Callsign caption
-    if [ "$CAPTIONON" == "on" ]; then
-      CAPTION="drawtext=fontfile=/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf: \
-        text=\'$CALL\': fontcolor=white: fontsize=36: box=1: boxcolor=black@0.5: \
-        boxborderw=5: x=(w/2-w/8-text_w)/2: y=(h/4-text_h)/2, "
+    # Put caption at the bottom of the screen with locator for US users
+    if [ "$IMAGE_HEIGHT" == "480" ]; then
+      if [ "$CAPTIONON" == "on" ]; then
+        CAPTION="drawtext=fontfile=/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf: \
+          text=\'$CALL-$LOCATOR\': fontcolor=white: fontsize=36: box=1: boxcolor=black@0.5: \
+          boxborderw=5:
+        x=(w/2-(text_w/2)): y=(h-text_h-40), "
+      else
+        CAPTION=""
+      fi
     else
-      CAPTION=""    
+      if [ "$CAPTIONON" == "on" ]; then
+        CAPTION="drawtext=fontfile=/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf: \
+          text=\'$CALL\': fontcolor=white: fontsize=36: box=1: boxcolor=black@0.5: \
+          boxborderw=5: x=(w/2-w/8-text_w)/2: y=(h/4-text_h)/2, "
+      else
+        CAPTION=""    
+      fi
     fi
 
     # Set the EasyCap input and PAL/NTSC standard

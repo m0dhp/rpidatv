@@ -1,7 +1,8 @@
-201712180
+201712181
 Complete rewrite of touchscreen touch response function
 Adds Menu Titles
-Adds Switchable 480p Output in some modes
+Adds Switchable 480p Output in CAMMPEG-2 and ANALOGMPEG-2
+Moves Caption and Adds Locator if 480p selected
 Fixes "Oversize test cards in Carousel"
 Enables IPTS input to DATV Express Output
 Disables option to turn the Viewfinder Off 

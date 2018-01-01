@@ -920,6 +920,7 @@ do_display_setup()
   Radio4=OFF
   Radio5=OFF
   Radio6=OFF
+  Radio7=OFF
   case "$MODE_DISPLAY" in
   Tontec35)
     Radio1=ON
@@ -939,6 +940,9 @@ do_display_setup()
   Console)
     Radio6=ON
   ;;
+  Element14_7)
+    Radio7=ON
+  ;;
   *)
     Radio1=ON
   ;;		
@@ -952,6 +956,7 @@ do_display_setup()
     "WaveshareB" "$DisplaySetupRpiBLCD" $Radio4 \
     "Waveshare4" "$DisplaySetupRpi4LCD" $Radio5 \
     "Console" "$DisplaySetupConsole" $Radio6 \
+    "Element14_7" "Element 14 RPi 7 inch Display" $Radio7 \
  	 3>&2 2>&1 1>&3)
 
   if [ $? -eq 0 ]; then                     ## If the selection has changed
@@ -979,6 +984,7 @@ do_display_setup()
       WaveshareB) INSERTFILE=$PATHCONFIGS"/waveshareb.txt" ;;
       Waveshare4) INSERTFILE=$PATHCONFIGS"/waveshare.txt" ;;
       Console)   INSERTFILE=$PATHCONFIGS"/console.txt" ;;
+      Element14_7)  INSERTFILE=$PATHCONFIGS"/tontec35.txt" ;; ## Message to be added
     esac
 
     ## Replace whatever is between the markers with the driver text

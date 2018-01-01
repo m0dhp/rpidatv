@@ -202,7 +202,9 @@ case "$MODE_STARTUP" in
       fi
     fi
     # Start the Touchscreen
-    /home/pi/rpidatv/bin/rpidatvgui
+    # /home/pi/rpidatv/bin/rpidatvgui
+    # Start the Touchscreen Scheduler
+    source /home/pi/rpidatv/scripts/scheduler.sh
     return
   ;;
   TestRig_boot)

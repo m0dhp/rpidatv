@@ -13,7 +13,8 @@ while [ "$GUI_RETURN_CODE" -gt 127 ]
   do
     case "$GUI_RETURN_CODE" in
       128)
-        exit
+        # Jump out of the loop
+        break
       ;;
       129)
         /home/pi/rpidatv/bin/rpidatvgui
@@ -30,9 +31,10 @@ while [ "$GUI_RETURN_CODE" -gt 127 ]
         GUI_RETURN_CODE=129
       ;;
       *)
-        exit
+        # Jump out of the loop
+        break
       ;;
     esac
   done
-exit 
+
 

@@ -984,7 +984,7 @@ do_display_setup()
       WaveshareB) INSERTFILE=$PATHCONFIGS"/waveshareb.txt" ;;
       Waveshare4) INSERTFILE=$PATHCONFIGS"/waveshare.txt" ;;
       Console)   INSERTFILE=$PATHCONFIGS"/console.txt" ;;
-      Element14_7)  INSERTFILE=$PATHCONFIGS"/tontec35.txt" ;; ## Message to be added
+      Element14_7)  INSERTFILE=$PATHCONFIGS"/tontec35.txt" ;;
     esac
 
     ## Replace whatever is between the markers with the driver text
@@ -1756,7 +1756,7 @@ do_TouchScreen()
   reset
   sudo killall fbcp >/dev/null 2>/dev/null
   fbcp &
-  /home/pi/rpidatv/bin/rpidatvgui
+  /home/pi/rpidatv/scripts/scheduler.sh
 }
 
 do_KTransmit()

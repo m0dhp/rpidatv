@@ -45,6 +45,19 @@ case $(ps -o comm= -p $PPID) in
   ;;
 esac
 
+if [ ! -f ps1.txt ]; then
+  echo $SESSION_TYPE >> ps1.txt
+  ps -cax >> ps1.txt
+else
+  if [ ! -f ps2.txt ]; then
+    echo $SESSION_TYPE >> ps2.txt
+    ps -cax >> ps2.txt
+  else
+    echo $SESSION_TYPE >> ps3.txt
+    ps -cax >> ps3.txt
+  fi
+fi
+
 # If gui is already running and this is an ssh session
 # stop the gui, start the menu and return
 ps -cax | grep 'rpidatvgui' >/dev/null 2>/dev/null
@@ -153,6 +166,25 @@ if [ "$RESULT" -eq 0 ]; then
 # replace usbtv with your EasyCap driver name
 fi
 
+# Map the touchscreen event to /dev/input/touchscreen
+
+sudo rm /dev/input/touchscreen >/dev/null 2>/dev/null
+cat /proc/bus/input/devices | grep 'H: Handlers=mouse0 event0' >/dev/null 2>/dev/null
+RESULT="$?"
+if [ "$RESULT" -eq 0 ]; then
+  sudo ln /dev/input/event0 /dev/input/touchscreen
+fi
+cat /proc/bus/input/devices | grep 'H: Handlers=mouse0 event1' >/dev/null 2>/dev/null
+RESULT="$?"
+if [ "$RESULT" -eq 0 ]; then
+  sudo ln /dev/input/event1 /dev/input/touchscreen
+fi
+cat /proc/bus/input/devices | grep 'H: Handlers=mouse0 event2' >/dev/null 2>/dev/null
+RESULT="$?"
+if [ "$RESULT" -eq 0 ]; then
+  sudo ln /dev/input/event2 /dev/input/touchscreen
+fi
+
 # Read the desired start-up behaviour
 MODE_STARTUP=$(get_config_var startup $CONFIGFILE)
 
@@ -201,8 +233,6 @@ case "$MODE_STARTUP" in
         sleep 5                # Give it time to start
       fi
     fi
-    # Start the Touchscreen
-    # /home/pi/rpidatv/bin/rpidatvgui
     # Start the Touchscreen Scheduler
     source /home/pi/rpidatv/scripts/scheduler.sh
     return

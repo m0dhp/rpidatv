@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Updated by davecrump 201712180
-
+# Updated by davecrump 201801011
 # Modified to overwrite ~/rpidatv/scripts and
 # ~/rpidatv/src, then compile
 # rpidatv, rpidatvgui avc2ts and adf4351
@@ -308,7 +307,7 @@ if [ -f "/home/pi/touchcal.txt" ]; then
 fi
 
 # Either install FreqShow, or downgrade sdl so that it works (20180101)
-if [ -f "/home/pi/FreqShow/freqshow.py" ] then
+if [ -f "/home/pi/FreqShow/freqshow.py" ]; then
   # Freqshow has already been installed, so so simply downgrade the sdl version
   dpkg -i /home/pi/rpidatv/scripts/configs/freqshow/libsdl1.2debian_1.2.15-5_armhf.deb
 else

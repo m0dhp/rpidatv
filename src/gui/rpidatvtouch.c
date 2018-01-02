@@ -2920,8 +2920,8 @@ void waituntil(int w,int h)
         printf("Button Event %d, Entering Menu 2 Case Statement\n",i);
         switch (i)
         {
-        case 0:                               // Exit to Linux
-          cleanexit(128);
+        case 0:                               // Exit to Linux (debug only)
+          // cleanexit(128);
           break;
         case 1:                               // Select FreqShow
           if(CheckRTL()==0)
@@ -3508,11 +3508,11 @@ void Define_Menu3()
 
   // Bottom Row, Menu 3
 
-  button = CreateButton(3, 0);
-  AddButtonStatus(button, "  Clean ^  Exit  ", &Blue);
+  // button = CreateButton(3, 0);
+  // AddButtonStatus(button, "  Clean ^  Exit  ", &Blue);
 
   button = CreateButton(3, 1);
-  AddButtonStatus(button, "Freq Show^ Spectrum ", &Blue);
+  AddButtonStatus(button, "FreqShow^Spectrum", &Blue);
 
   button = CreateButton(3, 2);
   AddButtonStatus(button, " Info  ", &Blue);

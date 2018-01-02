@@ -309,7 +309,7 @@ fi
 # Either install FreqShow, or downgrade sdl so that it works (20180101)
 if [ -f "/home/pi/FreqShow/freqshow.py" ]; then
   # Freqshow has already been installed, so so simply downgrade the sdl version
-  dpkg -i /home/pi/rpidatv/scripts/configs/freqshow/libsdl1.2debian_1.2.15-5_armhf.deb
+  sudo dpkg -i /home/pi/rpidatv/scripts/configs/freqshow/libsdl1.2debian_1.2.15-5_armhf.deb
 else
   # Start the install from scratch
   sudo apt-get -y install python-pip pandoc python-numpy pandoc python-pygame gdebi-core

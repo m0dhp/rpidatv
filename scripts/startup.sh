@@ -45,19 +45,6 @@ case $(ps -o comm= -p $PPID) in
   ;;
 esac
 
-if [ ! -f ps1.txt ]; then
-  echo $SESSION_TYPE >> ps1.txt
-  ps -cax >> ps1.txt
-else
-  if [ ! -f ps2.txt ]; then
-    echo $SESSION_TYPE >> ps2.txt
-    ps -cax >> ps2.txt
-  else
-    echo $SESSION_TYPE >> ps3.txt
-    ps -cax >> ps3.txt
-  fi
-fi
-
 # If gui is already running and this is an ssh session
 # stop the gui, start the menu and return
 ps -cax | grep 'rpidatvgui' >/dev/null 2>/dev/null

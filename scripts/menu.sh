@@ -978,7 +978,7 @@ do_display_setup()
     fi
 
     case "$chdisplay" in              ## Select the correct driver text
-      Tontec35)  INSERTFILE=$PATHCONFIGS"/tontec35.txt" ;; ## Message to be added
+      Tontec35)  INSERTFILE=$PATHCONFIGS"/tontec35.txt" ;;
       HDMITouch) INSERTFILE=$PATHCONFIGS"/hdmitouch.txt" ;;
       Waveshare) INSERTFILE=$PATHCONFIGS"/waveshare.txt" ;;
       WaveshareB) INSERTFILE=$PATHCONFIGS"/waveshareb.txt" ;;
@@ -993,6 +993,18 @@ do_display_setup()
 
     sudo cp "$TRANSFILE" "$CHANGEFILE"          ## Copy from the transfer file
     rm $TRANSFILE                               ## Delete the transfer file
+
+    ## Set the correct touchscreen map for FreqShow
+    sudo rm /etc/pointercal                     ## Delete the old file
+    case "$chdisplay" in                        ## Insert the new file
+      Tontec35)  sudo cp /home/pi/rpidatv/scripts/configs/freqshow/waveshare_pointercal /etc/pointercal ;;
+      HDMITouch) sudo cp /home/pi/rpidatv/scripts/configs/freqshow/waveshare_pointercal /etc/pointercal ;;
+      Waveshare) sudo cp /home/pi/rpidatv/scripts/configs/freqshow/waveshare_pointercal /etc/pointercal ;;
+      WaveshareB) sudo cp /home/pi/rpidatv/scripts/configs/freqshow/waveshare_pointercal /etc/pointercal ;;
+      Waveshare4) sudo cp /home/pi/rpidatv/scripts/configs/freqshow/waveshare4_pointercal /etc/pointercal ;;
+      Console)   sudo cp /home/pi/rpidatv/scripts/configs/freqshow/waveshare_pointercal /etc/pointercal ;;
+      Element14_7)  sudo cp /home/pi/rpidatv/scripts/configs/freqshow/waveshare_pointercal /etc/pointercal ;;
+    esac
 
     set_config_var display "$chdisplay" $CONFIGFILE
   fi

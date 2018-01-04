@@ -39,7 +39,7 @@ class FreqShowModel(object):
 		# Initialize auto scaling both min and max intensity (Y axis of plots).
 		self.min_auto_scale = True
 		self.max_auto_scale = True
-		self.set_min_intensity('-50')
+		self.set_min_intensity('-30')
 		self.set_max_intensity('50')
 		# Initialize RTL-SDR library.
 		self.sdr = RtlSdr()

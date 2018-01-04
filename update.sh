@@ -307,9 +307,18 @@ if [ -f "/home/pi/touchcal.txt" ]; then
 fi
 
 # Either install FreqShow, or downgrade sdl so that it works (20180101)
-if [ -f "/home/pi/FreqShow/freqshow.py" ]; then
-  # Freqshow has already been installed, so so simply downgrade the sdl version
+if [ -f "/home/pi/FreqShow/LICENSE" ]; then
+  # Freqshow has already been installed, so downgrade the sdl version
   sudo dpkg -i /home/pi/rpidatv/scripts/configs/freqshow/libsdl1.2debian_1.2.15-5_armhf.deb
+  # Delete the old FreqShow version
+  rm -fr /home/pi/FreqShow/
+  # Download FreqShow
+  git clone https://github.com/adafruit/FreqShow.git
+  # Change the settings for our environment
+  rm /home/pi/FreqShow/freqshow.py
+  cp /home/pi/rpidatv/scripts/configs/freqshow/waveshare_freqshow.py /home/pi/FreqShow/freqshow.py
+  rm /home/pi/FreqShow/model.py
+  cp /home/pi/rpidatv/scripts/configs/freqshow/waveshare_146_model.py /home/pi/FreqShow/model.py
 else
   # Start the install from scratch
   sudo apt-get -y install python-pip pandoc python-numpy pandoc python-pygame gdebi-core

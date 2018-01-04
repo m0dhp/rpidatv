@@ -3477,7 +3477,7 @@ void Start_Highlights_Menu2()
   }
   if(strcmp(Value,"CAMHDMPEG-2")==0)
   {
-    SelectInGroup(25 + 2, 25 + 2, 25 + 22, 1);
+    SelectInGroup(25 + 2, 25 + 2, 25 + 2, 1);
   }
 
   // Caption

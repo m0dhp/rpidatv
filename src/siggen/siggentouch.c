@@ -2252,11 +2252,6 @@ void waituntil(int w,int h)
                     , "from the Console Setup Menu", "and restart SigGen");
                   wait_touch();
                 }
-                else
-                {
-                  MsgBox4("No Attenuator Selected", "", "Please select an Attenuator Type", "from the Console Setup Menu");
-                  wait_touch();
-                }
               }
               else
               {

@@ -5,48 +5,49 @@
  *  @version 0.1
 *******************************************************************************/
 
-#include <unistd.h>
 #include <stdio.h>
-#include <math.h>
-#include <wiringPi.h>
 #include <sys/wait.h>
 #include "logitech.h"
 
  
 /***************************************************************************//**
- * @brief Detects if a Logitech webcam was connected since last boot
+ * @brief Detects if a Logitech webcam was connected since last restart
  *
  * @param None
  *
- * @return (int) 1 if webcam detected, 0 if not
+ * @return 0 = webcam not detected
+ *         1 = webcam detected
+ *         2 = shell returned unexpected exit status
 *******************************************************************************/
  
 int detect_logitech_webcam()
 {
+  char shell_command[MAX_COMMAND_LENGTH];
   FILE * shell;
-  shell = popen("dmesg | grep -E -q \"046d:0825|Webcam C525\"", "r");
+  sprintf(shell_command, "dmesg | grep -E -q \"%s\"", DMESG_PATTERN);
+  shell = popen(shell_command, "r");
   int r = pclose(shell);
   if (WEXITSTATUS(r) == 0)
   {
-    printf("detected\n");
+    printf("Logitech: webcam detected\n");
+    return 1;
   }
   else if (WEXITSTATUS(r) == 1)
   {
-    printf("not detected\n");
+    printf("Logitech: webcam not detected\n");
+    return 0;
   } 
   else 
   {
-    printf("unexpected exit status %d\n", WEXITSTATUS(r));
+    printf("Logitech: unexpected exit status %d\n", WEXITSTATUS(r));
+    return 2;
   }
-  return 0;
 }
-
 
 
 int main(int argc, char *argv[])
 {
-  printf("hello\n");
   detect_logitech_webcam();
-  printf("goodbye\n");
+  return 0;
 }
 

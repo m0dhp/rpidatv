@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <wiringPi.h>
+#include <sys/wait.h>
 #include "logitech.h"
 
  
@@ -22,7 +23,22 @@
  
 int detect_logitech_webcam()
 {
-	return 0;
+  FILE * shell;
+  shell = popen("dmesg | grep -E -q \"046d:0825|Webcam C525\"", "r");
+  int r = pclose(shell);
+  if (WEXITSTATUS(r) == 0)
+  {
+    printf("detected\n");
+  }
+  else if (WEXITSTATUS(r) == 1)
+  {
+    printf("not detected\n");
+  } 
+  else 
+  {
+    printf("unexpected exit status %d\n", WEXITSTATUS(r));
+  }
+  return 0;
 }
 
 
@@ -30,5 +46,7 @@ int detect_logitech_webcam()
 int main(int argc, char *argv[])
 {
   printf("hello\n");
+  detect_logitech_webcam();
+  printf("goodbye\n");
 }
 

@@ -1,8 +1,14 @@
+201801201
+Initialises spi GPIO ports on GUI start-up
+Corrects ADF4351 and Attenuator spi timing to improve reliability
+Add partial support (Video only) for Logitech C525 and C270 Webcams
+Introduces new gui sub-menus for parameter and config selection
+
 201801061
 Introduces attenuator option for Portsdown output in SigGen
 Adds attenuator option to Portsdown and ADF4351 modes in SigGen
 Enables DATV Express SigGen
-Enables 333KD QPSK mod for Portsdown and ADF4351 modes in SigGen
+Enables 333KS QPSK mod for Portsdown and ADF4351 modes in SigGen
 Cures multiple overlays of receive parameters
 Single touch exit from receive to Main Menu
 

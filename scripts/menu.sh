@@ -758,9 +758,19 @@ do_stop_transmit()
   # Stop the audio for CompVid mode
   sudo killall arecord >/dev/null 2>/dev/null
 
-  # Make sure that the PTT is releases (required for carrier and test modes)
+  # Make sure that the PTT is released (required for carrier and test modes)
   gpio mode $GPIO_PTT out
   gpio write $GPIO_PTT 0
+
+  # Check if driver for Logitech C270 or C525 needs to be reloaded
+  dmesg | grep -E -q "046d:0825|Webcam C525"
+  if [ $? == 0 ]; then
+    printf "Either C270 or C525 detected\n"
+    sleep 3
+    v4l2-ctl --list-devices > /dev/null 2> /dev/null
+  else
+    printf "Neither C270 nor C525 detected\n"
+  fi
 }
 
 do_display_on()

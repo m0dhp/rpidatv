@@ -75,20 +75,21 @@ detect_audio()
   else                   ## card detected
     printf "Audio card present\n"
     # Check for the presence of a dedicated audio device
-    arecord -l | grep -E -q "USB Audio Device|USB AUDIO|Head|Sound Device"
+    arecord -l | grep -E -q "USB Audio Device|USB AUDIO|Head|Sound Device|Webcam C525|U0x46d0x825"
     if [ $? == 0 ]; then   ## Present
       # Look for the dedicated USB Audio Device, select the line and take
       # the 6th character.  Max card number = 8 !!
-      MIC="$(arecord -l | grep -E "USB Audio Device|USB AUDIO|Head|Sound Device" | head -c 6 | tail -c 1)"
+      MIC="$(arecord -l | grep -E "USB Audio Device|USB AUDIO|Head|Sound Device|Webcam C525|U0x46d0x825" \
+        | head -c 6 | tail -c 1)"
     fi
     # Check for the presence of a Video dongle with audio
     arecord -l | grep -E -q \
-      "usbtv|U0x534d0x21|DVC90|Cx231xxAudio|STK1160|U0xeb1a0x2861|AV TO USB|Grabby|Webcam"
+      "usbtv|U0x534d0x21|DVC90|Cx231xxAudio|STK1160|U0xeb1a0x2861|AV TO USB|Grabby"
     if [ $? == 0 ]; then   ## Present
       # Look for the video dongle, select the line and take
       # the 6th character.  Max card number = 8 !!
       USBTV="$(arecord -l | grep -E \
-        "usbtv|U0x534d0x21|DVC90|Cx231xxAudio|STK1160|U0xeb1a0x2861|AV TO USB|Grabby|Webcam" \
+        "usbtv|U0x534d0x21|DVC90|Cx231xxAudio|STK1160|U0xeb1a0x2861|AV TO USB|Grabby" \
         | head -c 6 | tail -c 1)"
     fi
   fi

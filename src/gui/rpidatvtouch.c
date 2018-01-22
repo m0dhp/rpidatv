@@ -119,6 +119,7 @@ char TabFreq[5][255]={"71","146.5","437","1249","1255"};
 char FreqLabel[5][255]={" 71 MHz ","146.5 MHz","437 MHz ","1249 MHz","1255 MHz"};
 char TabModeAudio[5][255]={"auto", "mic", "video", "bleeps", "no_audio"};
 char TabModeSTD[2][255]={"6","0"};
+
 char TabModeVidIP[2][255]={"0","1"};
 char TabModeOP[8][255]={"IQ", "QPSKRF", "DATVEXPRESS", "BATC", "STREAMER", "COMPVID", "DTX1", "IP"};
 char TabModeOPtext[8][255]={"Portsdown", " UGLY ", "EXPRESS", " BATC ", "STREAM", "ANALOG", " DTX1 ", "IPTS out"};
@@ -134,6 +135,7 @@ char TabSource[6][255] = {"Pi Cam", "CompVid", "TCAnim", "TestCard", "PiScreen",
 char CurrentSource[255] = "PiScreen";
 char TabFormat[3][255] = {"4:3", "720p", " "};
 char CurrentFormat[255] = "4:3";
+
 char CurrentCaptionState[255] = "on";
 char CurrentAudioState[255] = "auto";
 char CurrentAtten[255] = "NONE";
@@ -159,6 +161,7 @@ void Start_Highlights_Menu21();
 void Start_Highlights_Menu22();
 void Start_Highlights_Menu23();
 void Start_Highlights_Menu24();
+
 void MsgBox4(const char *, const char *, const char *, const char *);
 void wait_touch();
 int getTouchSample(int *, int *, int *);
@@ -818,12 +821,16 @@ int DetectLogitechWebcam()
   }
   else if (WEXITSTATUS(r) == 1)
   {
+
     //printf("Logitech: webcam not detected\n");
+
     return 0;
   } 
   else 
   {
+
     //printf("Logitech: unexpected exit status %d\n", WEXITSTATUS(r));
+
     return 2;
   }
 }
@@ -1773,6 +1780,7 @@ void ApplyTXConfig()
       {
         strcpy(ModeInput, "PATERNAUDIO");
       }
+
       else // Shouldn't happen
       {
         strcpy(ModeInput, "DESKTOP");
@@ -5145,6 +5153,7 @@ void Define_Menu18()
   AddButtonStatus(button, "Cancel", &Blue);
   AddButtonStatus(button, "Cancel", &LBlue);
 
+
   // 2nd Row, Menu 18
 
   button = CreateButton(18, 5);
@@ -5251,6 +5260,7 @@ void Start_Highlights_Menu21()
     SelectInGroupOnMenu(21, 5, 6, 6, 1);
   }
   if (strcmp(ModeSTD, "6") == 0)
+
   {
     SelectInGroupOnMenu(21, 8, 9, 8, 1);
   }
@@ -5430,6 +5440,553 @@ void Start_Highlights_Menu24()
   else
   {
     SelectInGroupOnMenu(24, 5, 9, 5, 1);
+  }
+}
+
+void Define_Menu11()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  strcpy(MenuTitle[11], "RF Output Mode Selection Menu (11)"); 
+
+  // Bottom Row, Menu 11
+
+  button = CreateButton(11, 4);
+  AddButtonStatus(button, "Cancel", &Blue);
+  AddButtonStatus(button, "Cancel", &Green);
+
+  // 2nd Row, Menu 11
+
+  button = CreateButton(11, 5);
+  AddButtonStatus(button, TabTXMode[0], &Blue);
+  AddButtonStatus(button, TabTXMode[0], &Green);
+
+  button = CreateButton(11, 6);
+  AddButtonStatus(button, TabTXMode[1], &Blue);
+  AddButtonStatus(button, TabTXMode[1], &Green);
+}
+
+void Start_Highlights_Menu11()
+{
+  char vcoding[256];
+  char vsource[256];
+  ReadModeInput(vcoding, vsource);
+
+  if(strcmp(CurrentTXMode, TabTXMode[0])==0)
+  {
+    SelectInGroupOnMenu(11, 5, 6, 5, 1);
+  }
+  if(strcmp(CurrentTXMode, TabTXMode[1])==0)
+  {
+    SelectInGroupOnMenu(11, 5, 6, 6, 1);
+  }
+}
+
+void Define_Menu12()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  strcpy(MenuTitle[12], "Encoding Selection Menu (12)"); 
+
+  // Bottom Row, Menu 12
+
+  button = CreateButton(12, 4);
+  AddButtonStatus(button, "Cancel", &Blue);
+  AddButtonStatus(button, "Cancel", &Green);
+
+  // 2nd Row, Menu 12
+
+  button = CreateButton(12, 5);
+  AddButtonStatus(button, TabEncoding[0], &Blue);
+  AddButtonStatus(button, TabEncoding[0], &Green);
+
+  button = CreateButton(12, 6);
+  AddButtonStatus(button, TabEncoding[1], &Blue);
+  AddButtonStatus(button, TabEncoding[1], &Green);
+
+  button = CreateButton(12, 7);
+  AddButtonStatus(button, TabEncoding[2], &Blue);
+  AddButtonStatus(button, TabEncoding[2], &Green);
+}
+
+void Start_Highlights_Menu12()
+{
+  char vcoding[256];
+  char vsource[256];
+  ReadModeInput(vcoding, vsource);
+
+  if(strcmp(CurrentEncoding, TabEncoding[0]) == 0)
+  {
+    SelectInGroupOnMenu(12, 5, 7, 5, 1);
+  }
+  if(strcmp(CurrentEncoding, TabEncoding[1]) == 0)
+  {
+    SelectInGroupOnMenu(12, 5, 7, 6, 1);
+  }
+  if(strcmp(CurrentEncoding, TabEncoding[2]) == 0)
+  {
+    SelectInGroupOnMenu(12, 5, 7, 7, 1);
+  }
+}
+
+void Define_Menu13()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  strcpy(MenuTitle[13], "Output Device Menu (13)"); 
+
+  // Bottom Row, Menu 13
+
+  button = CreateButton(13, 4);
+  AddButtonStatus(button, "Cancel", &Blue);
+  AddButtonStatus(button, "Cancel", &Green);
+
+  button = CreateButton(13, 0);
+  AddButtonStatus(button, TabModeOPtext[5], &Blue);
+  AddButtonStatus(button, TabModeOPtext[5], &Green);
+
+  button = CreateButton(13, 1);
+  AddButtonStatus(button, TabModeOPtext[6], &Blue);
+  AddButtonStatus(button, TabModeOPtext[6], &Green);
+
+  button = CreateButton(13, 2);
+  AddButtonStatus(button, TabModeOPtext[7], &Blue);
+  AddButtonStatus(button, TabModeOPtext[7], &Green);
+
+  // 2nd Row, Menu 13
+
+  button = CreateButton(13, 5);
+  AddButtonStatus(button, TabModeOPtext[0], &Blue);
+  AddButtonStatus(button, TabModeOPtext[0], &Green);
+
+  button = CreateButton(13, 6);
+  AddButtonStatus(button, TabModeOPtext[1], &Blue);
+  AddButtonStatus(button, TabModeOPtext[1], &Green);
+
+  button = CreateButton(13, 7);
+  AddButtonStatus(button, TabModeOPtext[2], &Blue);
+  AddButtonStatus(button, TabModeOPtext[2], &Green);
+
+  button = CreateButton(13, 8);
+  AddButtonStatus(button, TabModeOPtext[3], &Blue);
+  AddButtonStatus(button, TabModeOPtext[3], &Green);
+
+  button = CreateButton(13, 9);
+  AddButtonStatus(button, TabModeOPtext[4], &Blue);
+  AddButtonStatus(button, TabModeOPtext[4], &Green);
+}
+
+void Start_Highlights_Menu13()
+{
+  if(strcmp(CurrentModeOP, TabModeOP[0]) == 0)
+  {
+    SelectInGroupOnMenu(13, 5, 9, 5, 1);
+    SelectInGroupOnMenu(13, 0, 2, 5, 1);
+  }
+  if(strcmp(CurrentModeOP, TabModeOP[1]) == 0)
+  {
+    SelectInGroupOnMenu(13, 5, 9, 6, 1);
+    SelectInGroupOnMenu(13, 0, 2, 6, 1);
+  }
+  if(strcmp(CurrentModeOP, TabModeOP[2]) == 0)
+  {
+    SelectInGroupOnMenu(13, 5, 9, 7, 1);
+    SelectInGroupOnMenu(13, 0, 2, 7, 1);
+  }
+  if(strcmp(CurrentModeOP, TabModeOP[3]) == 0)
+  {
+    SelectInGroupOnMenu(13, 5, 9, 8, 1);
+    SelectInGroupOnMenu(13, 0, 2, 8, 1);
+  }
+  if(strcmp(CurrentModeOP, TabModeOP[4]) == 0)
+  {
+    SelectInGroupOnMenu(13, 5, 9, 9, 1);
+    SelectInGroupOnMenu(13, 0, 2, 9, 1);
+  }
+  if(strcmp(CurrentModeOP, TabModeOP[5]) == 0)
+  {
+    SelectInGroupOnMenu(13, 5, 9, 0, 1);
+    SelectInGroupOnMenu(13, 0, 2, 0, 1);
+  }
+  if(strcmp(CurrentModeOP, TabModeOP[6]) == 0)
+  {
+    SelectInGroupOnMenu(13, 5, 9, 1, 1);
+    SelectInGroupOnMenu(13, 0, 2, 1, 1);
+  }
+  if(strcmp(CurrentModeOP, TabModeOP[7]) == 0)
+  {
+    SelectInGroupOnMenu(13, 5, 9, 2, 1);
+    SelectInGroupOnMenu(13, 0, 2, 2, 1);
+  }
+}
+
+void Define_Menu14()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  strcpy(MenuTitle[14], "Video Format Menu (14)"); 
+
+  // Bottom Row, Menu 14
+
+  button = CreateButton(14, 4);
+  AddButtonStatus(button, "Cancel", &Blue);
+  AddButtonStatus(button, "Cancel", &Green);
+
+  // 2nd Row, Menu 14
+
+  button = CreateButton(14, 5);
+  AddButtonStatus(button, TabFormat[0], &Blue);
+  AddButtonStatus(button, TabFormat[0], &Green);
+
+  button = CreateButton(14, 6);
+  AddButtonStatus(button, TabFormat[1], &Blue);
+  AddButtonStatus(button, TabFormat[1], &Green);
+
+  // button = CreateButton(14, 7);
+  // AddButtonStatus(button, TabFormat[2], &Blue);
+  // AddButtonStatus(button, TabFormat[2], &Green);
+}
+
+void Start_Highlights_Menu14()
+{
+  char vcoding[256];
+  char vsource[256];
+  ReadModeInput(vcoding, vsource);
+
+  if(strcmp(CurrentFormat, TabFormat[0]) == 0)
+  {
+    SelectInGroupOnMenu(14, 5, 7, 5, 1);
+  }
+  if(strcmp(CurrentFormat, TabFormat[1]) == 0)
+  {
+    SelectInGroupOnMenu(14, 5, 7, 6, 1);
+  }
+  //if(strcmp(CurrentFormat, TabFormat[2]) == 0)
+  //{
+  //  SelectInGroupOnMenu(14, 5, 7, 7, 1);
+  //}
+}
+
+void Define_Menu15()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  strcpy(MenuTitle[15], "Video Source Menu (15)"); 
+
+  // Bottom Row, Menu 15
+  button = CreateButton(15, 0);
+  AddButtonStatus(button, TabSource[5], &Blue);
+  AddButtonStatus(button, TabSource[5], &Green);
+
+  button = CreateButton(15, 4);
+  AddButtonStatus(button, "Cancel", &Blue);
+  AddButtonStatus(button, "Cancel", &Green);
+
+  // 2nd Row, Menu 15
+
+  button = CreateButton(15, 5);
+  AddButtonStatus(button, TabSource[0], &Blue);
+  AddButtonStatus(button, TabSource[0], &Green);
+
+  button = CreateButton(15, 6);
+  AddButtonStatus(button, TabSource[1], &Blue);
+  AddButtonStatus(button, TabSource[1], &Green);
+
+  button = CreateButton(15, 7);
+  AddButtonStatus(button, TabSource[2], &Blue);
+  AddButtonStatus(button, TabSource[2], &Green);
+
+  button = CreateButton(15, 8);
+  AddButtonStatus(button, TabSource[3], &Blue);
+  AddButtonStatus(button, TabSource[3], &Green);
+
+  button = CreateButton(15, 9);
+  AddButtonStatus(button, TabSource[4], &Blue);
+  AddButtonStatus(button, TabSource[4], &Green);
+}
+
+void Start_Highlights_Menu15()
+{
+  char vcoding[256];
+  char vsource[256];
+  ReadModeInput(vcoding, vsource);
+
+  if(strcmp(CurrentSource, TabSource[0]) == 0)
+  {
+    SelectInGroupOnMenu(15, 5, 9, 5, 1);
+    SelectInGroupOnMenu(15, 0, 0, 5, 1);
+  }
+  if(strcmp(CurrentSource, TabSource[1]) == 0)
+  {
+    SelectInGroupOnMenu(15, 5, 9, 6, 1);
+    SelectInGroupOnMenu(15, 0, 0, 6, 1);
+  }
+  if(strcmp(CurrentSource, TabSource[2]) == 0)
+  {
+    SelectInGroupOnMenu(15, 5, 9, 7, 1);
+    SelectInGroupOnMenu(15, 0, 0, 7, 1);
+  }
+  if(strcmp(CurrentSource, TabSource[3]) == 0)
+  {
+    SelectInGroupOnMenu(15, 5, 9, 8, 1);
+    SelectInGroupOnMenu(15, 0, 0, 8, 1);
+  }
+  if(strcmp(CurrentSource, TabSource[4]) == 0)
+  {
+    SelectInGroupOnMenu(15, 5, 9, 9, 1);
+    SelectInGroupOnMenu(15, 0, 0, 9, 1);
+  }
+  if(strcmp(CurrentSource, TabSource[5]) == 0)
+  {
+    SelectInGroupOnMenu(15, 5, 9, 0, 1);
+    SelectInGroupOnMenu(15, 0, 0, 0, 1);
+  }
+}
+
+void Define_Menu16()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  strcpy(MenuTitle[16], "Frequency Selection Menu (16)"); 
+
+  // Bottom Row, Menu 16
+
+  button = CreateButton(16, 4);
+  AddButtonStatus(button, "Cancel", &Blue);
+  AddButtonStatus(button, "Cancel", &Green);
+
+  // 2nd Row, Menu 16
+
+  button = CreateButton(16, 5);
+  AddButtonStatus(button, FreqLabel[0], &Blue);
+  AddButtonStatus(button, FreqLabel[0], &Green);
+
+  button = CreateButton(16, 6);
+  AddButtonStatus(button, FreqLabel[1], &Blue);
+  AddButtonStatus(button, FreqLabel[1], &Green);
+
+  button = CreateButton(16, 7);
+  AddButtonStatus(button, FreqLabel[2], &Blue);
+  AddButtonStatus(button, FreqLabel[2], &Green);
+
+  button = CreateButton(16, 8);
+  AddButtonStatus(button, FreqLabel[3], &Blue);
+  AddButtonStatus(button, FreqLabel[3], &Green);
+
+  button = CreateButton(16, 9);
+  AddButtonStatus(button, FreqLabel[4], &Blue);
+  AddButtonStatus(button, FreqLabel[4], &Green);
+}
+
+void Start_Highlights_Menu16()
+{
+  // Frequency
+  char Param[255];
+  char Value[255];
+  //int SR;
+
+  strcpy(Param,"freqoutput");
+  GetConfigParam(PATH_CONFIG,Param,Value);
+  //strcpy(freqtxt,Value);
+  printf("Value=%s %s\n",Value,"Freq");
+  if(strcmp(Value,TabFreq[0])==0)
+  {
+    SelectInGroupOnMenu(16, 5, 9, 5, 1);
+  }
+  if(strcmp(Value,TabFreq[1])==0)
+  {
+    SelectInGroupOnMenu(16, 5, 9, 6, 1);
+  }
+  if(strcmp(Value,TabFreq[2])==0)
+  {
+    SelectInGroupOnMenu(16, 5, 9, 7, 1);
+  }
+  if(strcmp(Value,TabFreq[3])==0)
+  {
+    SelectInGroupOnMenu(16, 5, 9, 8, 1);
+  }
+  if(strcmp(Value,TabFreq[4])==0)
+  {
+    SelectInGroupOnMenu(16, 5, 9, 9, 1);
+  }
+}
+
+void Define_Menu17()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+  char SRtext[255];
+
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  strcpy(MenuTitle[17], "Symbol Rate Selection Menu (17)"); 
+
+  // Bottom Row, Menu 17
+
+  button = CreateButton(17, 4);
+  AddButtonStatus(button, "Cancel", &Blue);
+  AddButtonStatus(button, "Cancel", &Green);
+
+  // 2nd Row, Menu 17
+
+  button = CreateButton(17, 5);
+  snprintf(SRtext, 10, "SR%d", TabSR[0]);
+  AddButtonStatus(button, SRtext, &Blue);
+  AddButtonStatus(button, SRtext, &Green);
+
+  button = CreateButton(17, 6);
+  snprintf(SRtext, 10, "SR%d", TabSR[1]);
+  AddButtonStatus(button, SRtext, &Blue);
+  AddButtonStatus(button, SRtext, &Green);
+
+  button = CreateButton(17, 7);
+  snprintf(SRtext, 10, "SR%d", TabSR[2]);
+  AddButtonStatus(button, SRtext, &Blue);
+  AddButtonStatus(button, SRtext, &Green);
+
+  button = CreateButton(17, 8);
+  snprintf(SRtext, 10, "SR%d", TabSR[3]);
+  AddButtonStatus(button, SRtext, &Blue);
+  AddButtonStatus(button, SRtext, &Green);
+
+  button = CreateButton(17, 9);
+  snprintf(SRtext, 10, "SR%d", TabSR[4]);
+  AddButtonStatus(button, SRtext, &Blue);
+  AddButtonStatus(button, SRtext, &Green);
+}
+
+void Start_Highlights_Menu17()
+{
+  // Symbol Rate
+  char Param[255];
+  char Value[255];
+  int SR;
+
+  strcpy(Param,"symbolrate");
+  GetConfigParam(PATH_CONFIG,Param,Value);
+  SR=atoi(Value);
+  printf("Value=%s %s\n",Value,"SR");
+
+  if ( SR == TabSR[0] )
+  {
+    SelectInGroupOnMenu(17, 5, 9, 5, 1);
+  }
+  else if ( SR == TabSR[1] )
+  {
+    SelectInGroupOnMenu(17, 5, 9, 6, 1);
+  }
+  else if ( SR == TabSR[2] )
+  {
+    SelectInGroupOnMenu(17, 5, 9, 7, 1);
+  }
+  else if ( SR == TabSR[3] )
+  {
+    SelectInGroupOnMenu(17, 5, 9, 8, 1);
+  }
+  else if ( SR == TabSR[4] )
+  {
+    SelectInGroupOnMenu(17, 5, 9, 9, 1);
+  }
+}
+
+void Define_Menu18()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  strcpy(MenuTitle[18], "FEC Selection Menu (18)"); 
+
+  // Bottom Row, Menu 18
+
+  button = CreateButton(18, 4);
+  AddButtonStatus(button, "Cancel", &Blue);
+  AddButtonStatus(button, "Cancel", &Green);
+
+  // 2nd Row, Menu 18
+
+  button = CreateButton(18, 5);
+  AddButtonStatus(button,"FEC 1/2",&Blue);
+  AddButtonStatus(button,"FEC 1/2",&Green);
+
+  button = CreateButton(18, 6);
+  AddButtonStatus(button,"FEC 2/3",&Blue);
+  AddButtonStatus(button,"FEC 2/3",&Green);
+
+  button = CreateButton(18, 7);
+  AddButtonStatus(button,"FEC 3/4",&Blue);
+  AddButtonStatus(button,"FEC 3/4",&Green);
+
+  button = CreateButton(18, 8);
+  AddButtonStatus(button,"FEC 5/6",&Blue);
+  AddButtonStatus(button,"FEC 5/6",&Green);
+
+  button = CreateButton(18, 9);
+  AddButtonStatus(button,"FEC 7/8",&Blue);
+  AddButtonStatus(button,"FEC 7/8",&Green);
+}
+
+void Start_Highlights_Menu18()
+{
+  // FEC
+  char Param[255];
+  char Value[255];
+  int fec;
+
+  strcpy(Param,"fec");
+  strcpy(Value,"");
+  GetConfigParam(PATH_CONFIG,Param,Value);
+  printf("Value=%s %s\n",Value,"Fec");
+  fec=atoi(Value);
+  switch(fec)
+  {
+    //void SelectInGroupOnMenu(int Menu, int StartButton, int StopButton, int NumberButton, int Status)
+
+    case 1:SelectInGroupOnMenu(18, 5, 9, 5, 1);
+    break;
+    case 2:SelectInGroupOnMenu(18, 5, 9, 6, 1);
+    break;
+    case 3:SelectInGroupOnMenu(18, 5, 9, 7, 1);
+    break;
+    case 5:SelectInGroupOnMenu(18, 5, 9, 8, 1);
+    break;
+    case 7:SelectInGroupOnMenu(18, 5, 9, 9, 1);
+    break;
   }
 }
 

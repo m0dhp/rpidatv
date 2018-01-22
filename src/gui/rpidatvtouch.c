@@ -119,7 +119,6 @@ char TabFreq[5][255]={"71","146.5","437","1249","1255"};
 char FreqLabel[5][255]={" 71 MHz ","146.5 MHz","437 MHz ","1249 MHz","1255 MHz"};
 char TabModeAudio[5][255]={"auto", "mic", "video", "bleeps", "no_audio"};
 char TabModeSTD[2][255]={"6","0"};
-
 char TabModeVidIP[2][255]={"0","1"};
 char TabModeOP[8][255]={"IQ", "QPSKRF", "DATVEXPRESS", "BATC", "STREAMER", "COMPVID", "DTX1", "IP"};
 char TabModeOPtext[8][255]={"Portsdown", " UGLY ", "EXPRESS", " BATC ", "STREAM", "ANALOG", " DTX1 ", "IPTS out"};
@@ -135,7 +134,6 @@ char TabSource[6][255] = {"Pi Cam", "CompVid", "TCAnim", "TestCard", "PiScreen",
 char CurrentSource[255] = "PiScreen";
 char TabFormat[3][255] = {"4:3", "720p", " "};
 char CurrentFormat[255] = "4:3";
-
 char CurrentCaptionState[255] = "on";
 char CurrentAudioState[255] = "auto";
 char CurrentAtten[255] = "NONE";
@@ -161,7 +159,6 @@ void Start_Highlights_Menu21();
 void Start_Highlights_Menu22();
 void Start_Highlights_Menu23();
 void Start_Highlights_Menu24();
-
 void MsgBox4(const char *, const char *, const char *, const char *);
 void wait_touch();
 int getTouchSample(int *, int *, int *);
@@ -821,16 +818,12 @@ int DetectLogitechWebcam()
   }
   else if (WEXITSTATUS(r) == 1)
   {
-
     //printf("Logitech: webcam not detected\n");
-
     return 0;
   } 
   else 
   {
-
     //printf("Logitech: unexpected exit status %d\n", WEXITSTATUS(r));
-
     return 2;
   }
 }
@@ -1780,7 +1773,6 @@ void ApplyTXConfig()
       {
         strcpy(ModeInput, "PATERNAUDIO");
       }
-
       else // Shouldn't happen
       {
         strcpy(ModeInput, "DESKTOP");
@@ -4491,7 +4483,7 @@ void Start_Highlights_Menu2()
 // Retrieves stored value for each group of buttons
 // and then sets the correct highlight
 {
-  char Param[255];
+  /* char Param[255];
   char Value[255];
 
   // Audio Input
@@ -4511,7 +4503,7 @@ void Start_Highlights_Menu2()
   if(strcmp(Value,"video") == 0)
   {
     SelectInGroup(25 + 5, 25 + 7, 25 + 7, 1);
-  }
+  } */
 }
 
 void Define_Menu3()
@@ -5153,7 +5145,6 @@ void Define_Menu18()
   AddButtonStatus(button, "Cancel", &Blue);
   AddButtonStatus(button, "Cancel", &LBlue);
 
-
   // 2nd Row, Menu 18
 
   button = CreateButton(18, 5);
@@ -5260,7 +5251,6 @@ void Start_Highlights_Menu21()
     SelectInGroupOnMenu(21, 5, 6, 6, 1);
   }
   if (strcmp(ModeSTD, "6") == 0)
-
   {
     SelectInGroupOnMenu(21, 8, 9, 8, 1);
   }

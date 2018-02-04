@@ -2051,7 +2051,7 @@ void GreyOut1()
       SetButtonStatus(ButtonNumber(CurrentMenu, 7), 0); // Audio
       SetButtonStatus(ButtonNumber(CurrentMenu, 6), 0); // Caption
       SetButtonStatus(ButtonNumber(CurrentMenu, 6), 0); // EasyCap
-      
+
       if (strcmp(CurrentEncoding, "IPTS in") == 0)
       {
         SetButtonStatus(ButtonNumber(CurrentMenu, 18), 2); // Format
@@ -5531,6 +5531,7 @@ void Start_Highlights_Menu1()
   // Call to Check Grey buttons
   GreyOut1();
 
+
   // Presets Buttons 0 - 3
   
   char Presettext[63];
@@ -6438,7 +6439,7 @@ void Start_Highlights_Menu15()
 void Define_Menu16()
 {
   int button;
-  color_t Green;
+  //color_t Green;
   color_t Blue;
   color_t LBlue;
   Green.r=0; Green.g=128; Green.b=0;
@@ -7032,6 +7033,8 @@ void Start_Highlights_Menu23()
   {
     SelectInGroupOnMenu(23, 5, 9, 9, 1);
   }
+  // Call to GreyOut inappropriate buttons
+  GreyOut15();
 }
 
 void Define_Menu24()
@@ -7100,6 +7103,7 @@ void Start_Highlights_Menu24()
 void Define_Menu26()
 {
   int button;
+  char SRtext[255];
   color_t Green;
   color_t Blue;
   color_t LBlue;
@@ -7593,7 +7597,6 @@ void Define_Menu41()
   AddButtonStatus(button, "0", &LBlue);
 }
 
-
 static void
 terminate(int dummy)
 {
@@ -7762,6 +7765,11 @@ int main(int argc, char **argv)
 
   Define_Menu41();
 
+
+  Define_Menu21();
+  Define_Menu22();
+  Define_Menu23();
+  Define_Menu24();
 
   // Start the button Menu
   Start(wscreen,hscreen);

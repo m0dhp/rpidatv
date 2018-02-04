@@ -13,7 +13,8 @@ printf "\nCommencing update.\n\n"
 cp -f -r /home/pi/rpidatv/scripts/installed_version.txt /home/pi/prev_installed_version.txt
 
 # Make a safe copy of rpidatvconfig.txt
-cp -f -r /home/pi/rpidatv/scripts/rpidatvconfig.txt /home/pi/rpidatvconfig.txt
+cp -f -r /home/pi/rpidatv/scripts/rpidatvconfig.txt /home/pi/rpidatvconfig.txt >/dev/null 2>/dev/null
+
 
 # If they exist, make a safe copies of portsdown_config and portsdown_presets (201802040)
 if [ -f "/home/pi/rpidatv/scripts/portsdown_config.txt" ]; then

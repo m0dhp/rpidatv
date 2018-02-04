@@ -5531,7 +5531,6 @@ void Start_Highlights_Menu1()
   // Call to Check Grey buttons
   GreyOut1();
 
-
   // Presets Buttons 0 - 3
   
   char Presettext[63];
@@ -7033,8 +7032,6 @@ void Start_Highlights_Menu23()
   {
     SelectInGroupOnMenu(23, 5, 9, 9, 1);
   }
-  // Call to GreyOut inappropriate buttons
-  GreyOut15();
 }
 
 void Define_Menu24()
@@ -7596,6 +7593,7 @@ void Define_Menu41()
   AddButtonStatus(button, "0", &LBlue);
 }
 
+
 static void
 terminate(int dummy)
 {
@@ -7764,11 +7762,6 @@ int main(int argc, char **argv)
 
   Define_Menu41();
 
-
-  Define_Menu21();
-  Define_Menu22();
-  Define_Menu23();
-  Define_Menu24();
 
   // Start the button Menu
   Start(wscreen,hscreen);

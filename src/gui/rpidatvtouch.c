@@ -45,6 +45,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KYEL  "\x1B[33m"
 
 #define PATH_CONFIG "/home/pi/rpidatv/scripts/rpidatvconfig.txt"
+#define PATH_PCONFIG "/home/pi/rpidatv/scripts/portsdown_config.txt"
+#define PATH_PPRESETS "/home/pi/rpidatv/scripts/portsdown_presets.txt"
 #define PATH_TOUCHCAL "/home/pi/rpidatv/scripts/touchcal.txt"
 
 char ImageFolder[]="/home/pi/rpidatv/image/";
@@ -74,7 +76,7 @@ typedef struct {
 
 // 	int LastEventTime; Was part of button_t.  No longer used
 
-#define MAX_BUTTON 500
+#define MAX_BUTTON 600
 int IndexButtonInArray=0;
 button_t ButtonArray[MAX_BUTTON];
 #define TIME_ANTI_BOUNCE 500
@@ -85,7 +87,7 @@ int CurrentMenu=1;
 int fec;
 int SR;
 char ModeInput[255];
-char freqtxt[255];
+// char freqtxt[255]; not global
 char ModeAudio[255];
 char ModeOutput[255];
 char ModeSTD[255];
@@ -109,14 +111,21 @@ char MenuTitle[31][127];
 
 // Values for buttons
 // May be over-written by values from from rpidatvconfig.txt:
-
-int TabSR[5]={125,333,1000,2000,4000};
-char SRLabel[5][255]={"SR 125","SR 333","SR1000","SR2000","SR4000"};
+char TabBand[9][3]={"d1", "d2", "d3", "d4", "d5", "t1", "t2", "t3", "t4"};
+char TabBandLabel[9][15]={"71_MHz", "146_MHz", "70_cm", "23_cm", "13_cm", "9_cm", "6_cm", "3_cm", "1.2_cm"};
+char TabPresetLabel[4][15]={"-", "-", "-", "-"};
+float TabBandAttenLevel[9]={-10, -10, -10, -10, -10, -10, -10, -10, -10};
+int TabBandExpLevel[9]={30, 30, 30, 30, 30, 30, 30, 30, 30};
+int TabBandExpPorts[9]={2, 2, 2, 2, 2, 2, 2, 2, 2};
+float TabBandLO[9]={0, 0, 0, 0, 0, 3024, 5328, 9936, 23616};
+char TabBandNumbers[9][10]={"1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999"};
+int TabSR[9]={125,333,1000,2000,4000, 88, 250, 500, 3000};
+char SRLabel[9][255]={"SR 125","SR 333","SR1000","SR2000","SR4000", "SR 88", "SR 250", "SR 500", "SR3000"};
 int TabFec[5]={1,2,3,5,7};
 char TabModeInput[12][255]={"CAMMPEG-2","CAMH264","PATERNAUDIO","ANALOGCAM","CARRIER","CONTEST"\
   ,"IPTSIN","ANALOGMPEG-2", "CARDMPEG-2", "CAMHDMPEG-2", "DESKTOP", " "};
-char TabFreq[5][255]={"71","146.5","437","1249","1255"};
-char FreqLabel[5][255]={" 71 MHz ","146.5 MHz","437 MHz ","1249 MHz","1255 MHz"};
+char TabFreq[9][255]={"71", "146.5", "437", "1249", "1255", "436", "436.5", "437.5", "438"};
+char FreqLabel[31][255];
 char TabModeAudio[5][255]={"auto", "mic", "video", "bleeps", "no_audio"};
 char TabModeSTD[2][255]={"6","0"};
 char TabModeVidIP[2][255]={"0","1"};
@@ -137,8 +146,12 @@ char CurrentFormat[255] = "4:3";
 char CurrentCaptionState[255] = "on";
 char CurrentAudioState[255] = "auto";
 char CurrentAtten[255] = "NONE";
+int CurrentBand = 2; // 0 thru 8
+char KeyboardReturn[64];
+char FreqBtext[31];
 
-int Inversed=0;//Display is inversed (Waveshare=1)
+int Inversed=0;           //Display is inversed (Waveshare=1)
+int PresetStoreTrigger=0; //Set to 1 if awaiting preset being stored
 
 pthread_t thfft,thbutton,thview;
 
@@ -155,12 +168,21 @@ void Start_Highlights_Menu15();
 void Start_Highlights_Menu16();
 void Start_Highlights_Menu17();
 void Start_Highlights_Menu18();
+void Start_Highlights_Menu19();
 void Start_Highlights_Menu21();
 void Start_Highlights_Menu22();
 void Start_Highlights_Menu23();
 void Start_Highlights_Menu24();
+void Start_Highlights_Menu26();
+void Start_Highlights_Menu27();
+void Start_Highlights_Menu28();
 void MsgBox4(const char *, const char *, const char *, const char *);
 void wait_touch();
+void waituntil(int, int);
+void Keyboard(char *, char *, int);
+void DoFreqChange();
+
+
 int getTouchSample(int *, int *, int *);
 void TransformTouchMap(int, int);
 int ButtonNumber(int, int);
@@ -424,7 +446,6 @@ void GetThrottled(char Throttled[256])
   pclose(fp);
 }
 
-
 /***************************************************************************//**
  * @brief Reads the input source from rpidatvconfig.txt
  *        and determines coding and video source
@@ -436,7 +457,7 @@ void GetThrottled(char Throttled[256])
 void ReadModeInput(char coding[256], char vsource[256])
 {
   char ModeInput[256];
-  GetConfigParam(PATH_CONFIG,"modeinput", ModeInput);
+  GetConfigParam(PATH_PCONFIG,"modeinput", ModeInput);
 
   strcpy(coding, "notset");
   strcpy(vsource, "notset");
@@ -574,7 +595,7 @@ void ReadModeInput(char coding[256], char vsource[256])
 void ReadModeOutput(char Moutput[256])
 {
   char ModeOutput[256];
-  GetConfigParam(PATH_CONFIG,"modeoutput", ModeOutput);
+  GetConfigParam(PATH_PCONFIG,"modeoutput", ModeOutput);
   strcpy(CurrentModeOP, ModeOutput);
   strcpy(Moutput, "notset");
 
@@ -639,8 +660,8 @@ void ReadModeOutput(char Moutput[256])
 void ReadModeEasyCap()
 {
   // char ModeOutput[256];
-  GetConfigParam(PATH_CONFIG,"analogcaminput", ModeVidIP);
-  GetConfigParam(PATH_CONFIG,"analogcamstandard", ModeSTD);
+  GetConfigParam(PATH_PCONFIG,"analogcaminput", ModeVidIP);
+  GetConfigParam(PATH_PCONFIG,"analogcamstandard", ModeSTD);
 }
 
 /***************************************************************************//**
@@ -653,7 +674,7 @@ void ReadModeEasyCap()
 
 void ReadCaptionState()
 {
-  GetConfigParam(PATH_CONFIG,"caption", CurrentCaptionState);
+  GetConfigParam(PATH_PCONFIG,"caption", CurrentCaptionState);
 }
 
 /***************************************************************************//**
@@ -666,7 +687,7 @@ void ReadCaptionState()
 
 void ReadAudioState()
 {
-  GetConfigParam(PATH_CONFIG,"audio", CurrentAudioState);
+  GetConfigParam(PATH_PCONFIG,"audio", CurrentAudioState);
 }
 
 /***************************************************************************//**
@@ -679,9 +700,135 @@ void ReadAudioState()
 
 void ReadAttenState()
 {
-  GetConfigParam(PATH_CONFIG,"attenuator", CurrentAtten);
+  GetConfigParam(PATH_PCONFIG,"attenuator", CurrentAtten);
 }
 
+/***************************************************************************//**
+ * @brief Reads the current band from portsdown_config.txt
+ *        
+ * @param nil
+ *
+ * @return void
+*******************************************************************************/
+
+void ReadBand()
+{
+  char Param[15];
+  char Value[15]="";
+  float CurrentFreq;
+
+  // Look up the current frequency
+  strcpy(Param,"freqoutput");
+  GetConfigParam(PATH_PCONFIG, Param, Value);
+  CurrentFreq = atof(Value);
+  strcpy(Value,"");
+
+  // Look up the current band
+  strcpy(Param,"band");
+  GetConfigParam(PATH_PCONFIG, Param, Value);
+ 
+  if (strcmp(Value, "t1") == 0)
+  {
+    CurrentBand = 5;
+  }
+  if (strcmp(Value, "t2") == 0)
+  {
+    CurrentBand = 6;
+  }
+  if (strcmp(Value, "t3") == 0)
+  {
+    CurrentBand = 7;
+  }
+  if (strcmp(Value, "t4") == 0)
+  {
+    CurrentBand = 8;
+  }
+
+  if ((strcmp(Value, TabBand[0]) == 0) || (strcmp(Value, TabBand[1]) == 0)
+   || (strcmp(Value, TabBand[2]) == 0) || (strcmp(Value, TabBand[3]) == 0)
+   || (strcmp(Value, TabBand[4]) == 0))
+  {
+    // Not a transverter, so set band based on the current frequency
+
+    if (CurrentFreq < 100)                            // 71 MHz
+    {
+       CurrentBand = 0;
+       strcpy(Value, "d1");
+    }
+    if ((CurrentFreq >= 100) && (CurrentFreq < 250))  // 146 MHz
+    {
+      CurrentBand = 1;
+      strcpy(Value, "d2");
+    }
+    if ((CurrentFreq >= 250) && (CurrentFreq < 950))  // 437 MHz
+    {
+      CurrentBand = 2;
+      strcpy(Value, "d3");
+    }
+    if ((CurrentFreq >= 950) && (CurrentFreq <2000))  // 1255 MHz
+    {
+      CurrentBand = 3;
+      strcpy(Value, "d4");
+    }
+    if (CurrentFreq >= 2000)                          // 2400 MHz
+    {
+      CurrentBand = 4;
+      strcpy(Value, "d5");
+    }
+
+    // And set the band correctly
+    strcpy(Param,"band");
+    SetConfigParam(PATH_PCONFIG, Param, Value);
+  }
+    printf("In ReadBand, CurrentFreq = %f, CurrentBand = %d and band desig = %s\n", CurrentFreq, CurrentBand, Value);
+
+}
+
+/***************************************************************************//**
+ * @brief Reads the current band details from portsdown_presets.txt
+ *        
+ * @param nil
+ *
+ * @return void
+*******************************************************************************/
+void ReadBandDetails()
+{
+  int i;
+  char Param[31];
+  char Value[31]="";
+  for( i = 0; i < 9; i = i + 1)
+  {
+    strcpy(Param, TabBand[i]);
+    strcat(Param, "label");
+    GetConfigParam(PATH_PPRESETS, Param, Value);
+    strcpy(TabBandLabel[i], Value);
+    
+    strcpy(Param, TabBand[i]);
+    strcat(Param, "attenlevel");
+    GetConfigParam(PATH_PPRESETS, Param, Value);
+    TabBandAttenLevel[i] = atoi(Value);
+
+    strcpy(Param, TabBand[i]);
+    strcat(Param, "explevel");
+    GetConfigParam(PATH_PPRESETS, Param, Value);
+    TabBandExpLevel[i] = atoi(Value);
+
+    strcpy(Param, TabBand[i]);
+    strcat(Param, "expports");
+    GetConfigParam(PATH_PPRESETS, Param, Value);
+    TabBandExpPorts[i] = atoi(Value);
+
+    strcpy(Param, TabBand[i]);
+    strcat(Param, "lo");
+    GetConfigParam(PATH_PPRESETS, Param, Value);
+    TabBandLO[i] = atof(Value);
+
+    strcpy(Param, TabBand[i]);
+    strcat(Param, "numbers");
+    GetConfigParam(PATH_PPRESETS, Param, Value);
+    strcpy(TabBandNumbers[i], Value);
+  }
+}
 
 /***************************************************************************//**
  * @brief Looks up the SD Card Serial Number
@@ -842,17 +989,16 @@ void ReadPresets()
   int n;
   char Param[255];
   char Value[255];
-  char SRTag[5][255]={"psr1","psr2","psr3","psr4","psr5"};
-  char FreqTag[5][255]={"pfreq1","pfreq2","pfreq3","pfreq4","pfreq5"};
-  char SRValue[5][255];
-  //char FreqValue[5];
+  char SRTag[9][255]={"psr1","psr2","psr3","psr4","psr5","psr6","psr7","psr8","psr9"};
+  char FreqTag[9][255]={"pfreq1","pfreq2","pfreq3","pfreq4","pfreq5","pfreq6","pfreq7","pfreq8","pfreq9"};
+  char SRValue[9][255];
   int len;
 
   // Read SRs
-  for( n = 0; n < 5; n = n + 1)
+  for(n = 0; n < 9; n = n + 1)
   {
     strcpy(Param, SRTag[ n ]);
-    GetConfigParam(PATH_CONFIG,Param,Value);
+    GetConfigParam(PATH_PPRESETS,Param,Value);
     strcpy(SRValue[ n ], Value);
     TabSR[n] = atoi(SRValue[n]);
     if (TabSR[n] > 999)
@@ -865,15 +1011,13 @@ void ReadPresets()
       strcpy(SRLabel[n], "SR ");
       strcat(SRLabel[n], SRValue[n]);
     }
-  //printf("Read Presets\n");
-  //printf("Value=%s %s\n",SRValue[ n ],"SR");
   }
 
   // Read Frequencies
-  for( n = 0; n < 5; n = n + 1)
+  for(n = 0; n < 9; n = n + 1)
   {
     strcpy(Param, FreqTag[ n ]);
-    GetConfigParam(PATH_CONFIG,Param,Value);
+    GetConfigParam(PATH_PPRESETS, Param, Value);
     strcpy(TabFreq[ n ], Value);
     len  = strlen(TabFreq[n]);
     switch (len)
@@ -900,6 +1044,15 @@ void ReadPresets()
         strcat(FreqLabel[n], " M");
         break;
     }
+  }
+
+  // Read Preset Config button labels
+  for(n = 0; n < 4; n = n + 1)
+  {
+    strcpy(Value, "");
+    snprintf(Param, 10, "p%dlabel", n + 1);
+    GetConfigParam(PATH_PPRESETS, Param, Value);
+    strcpy(TabPresetLabel[n], Value);
   }
 }
 
@@ -1008,7 +1161,8 @@ void touchcal()
   char Param[255];                 // Parameter name for writing to Calibration File
   char Value[255];                 // Value for writing to Calibration File
 
-  MsgBox4("TOUCHSCREEN CALIBRATION", "Touch the screen on each cross", "Screen will be recalibrated after 8 touches", "Touch screen to start");
+  MsgBox4("TOUCHSCREEN CALIBRATION", "Touch the screen on each cross"
+    , "Screen will be recalibrated after 8 touches", "Touch screen to start");
   wait_touch();
 
   for (n = 1; n < 9; n = n + 1 )
@@ -1248,7 +1402,7 @@ void TransformTouchMap(int x, int y)
     scaledX = shiftX+wscreen-y/(scaleXvalue+factorX);
 
     strcpy(Param,"display");  //Check for Waveshare 4 inch
-    GetConfigParam(PATH_CONFIG,Param,Value);
+    GetConfigParam(PATH_PCONFIG,Param,Value);
     if(strcmp(Value,"Waveshare4")!=0)
     {
       scaledY = shiftY+hscreen-x/(scaleYvalue+factorY);
@@ -1359,36 +1513,36 @@ int AddButton(int x,int y,int w,int h)
 
 int ButtonNumber(int MenuIndex, int Button)
 {
-  // Returns the Button Number (0 - 499) from the Menu number and the button position
+  // Returns the Button Number (0 - 599) from the Menu number and the button position
   int ButtonNumb = 0;
 
   if (MenuIndex <= 10)
   {
     ButtonNumb = (MenuIndex - 1) * 25 + Button;
   }
-  if ((MenuIndex >= 11) && (MenuIndex <= 30))
+  if ((MenuIndex >= 11) && (MenuIndex <= 40))
   {
     ButtonNumb = 250 + (MenuIndex - 11) * 10 + Button;
   }
-  if ((MenuIndex >= 31) && (MenuIndex <= 31))
+  if ((MenuIndex >= 41) && (MenuIndex <= 41))
   {
-    ButtonNumb = 450 + (MenuIndex - 31) * 50 + Button;
+    ButtonNumb = 550 + (MenuIndex - 41) * 50 + Button;
   }
-  if (MenuIndex > 31)
+  if (MenuIndex > 41)
   {
-    ButtonNumb = 500;
+    ButtonNumb = 600;
   }
   return ButtonNumb;
 }
 
 int CreateButton(int MenuIndex, int ButtonPosition)
 {
-  // Provide Menu number (int 1 - 31), Button Position (0 bottom left, 23 top right)
+  // Provide Menu number (int 1 - 41), Button Position (0 bottom left, 23 top right)
   // return button number
 
   // Menus 1 - 10 are classic 25-button menus
-  // Menus 11 - 30 are 10-button menus
-  // Menu 31 is a keyboard
+  // Menus 11 - 40 are 10-button menus
+  // Menu 41 is a keyboard
 
   int ButtonIndex;
   int x = 0;
@@ -1396,40 +1550,107 @@ int CreateButton(int MenuIndex, int ButtonPosition)
   int w = 0;
   int h = 0;
 
-  // Calculate button index
-  if (MenuIndex <= 10)
-  {
-    ButtonIndex = (MenuIndex - 1) * 25 + ButtonPosition;
-  }
-  if ((MenuIndex >= 11) && (MenuIndex <= 30))
-  {
-    ButtonIndex = 250 + (MenuIndex - 11) * 10 + ButtonPosition;
-  }
-  if ((MenuIndex >= 31) && (MenuIndex <= 31))
-  {
-    ButtonIndex = 450 + (MenuIndex - 31) * 50 + ButtonPosition;
-  }
+  ButtonIndex = ButtonNumber(MenuIndex, ButtonPosition);
 
-  if (ButtonPosition < 20)  // Bottom 4 rows
+  if (MenuIndex != 41)
   {
-    x = (ButtonPosition % 5) * wbuttonsize + 20;  // % operator gives the remainder of the division
-    y = (ButtonPosition / 5) * hbuttonsize + 20;
-    w = wbuttonsize * 0.9;
-    h = hbuttonsize * 0.9;
+    if (ButtonPosition < 20)  // Bottom 4 rows
+    {
+      x = (ButtonPosition % 5) * wbuttonsize + 20;  // % operator gives the remainder of the division
+      y = (ButtonPosition / 5) * hbuttonsize + 20;
+      w = wbuttonsize * 0.9;
+      h = hbuttonsize * 0.9;
+    }
+    else if ((ButtonPosition == 20) || (ButtonPosition == 21))  // TX and RX buttons
+    {
+      x = (ButtonPosition % 5) * wbuttonsize *1.7 + 20;    // % operator gives the remainder of the division
+      y = (ButtonPosition / 5) * hbuttonsize + 20;
+      w = wbuttonsize * 1.2;
+      h = hbuttonsize * 1.2;
+    }
+    else if ((ButtonPosition == 22) || (ButtonPosition == 23)) //Menu Up and Menu down buttons
+    {
+      x = ((ButtonPosition + 1) % 5) * wbuttonsize + 20;  // % operator gives the remainder of the division
+      y = (ButtonPosition / 5) * hbuttonsize + 20;
+      w = wbuttonsize * 0.9;
+      h = hbuttonsize * 1.2;
+    }
   }
-  else if ((ButtonPosition == 20) || (ButtonPosition == 21))  // TX and RX buttons
+  else  // Keyboard
   {
-    x = (ButtonPosition % 5) * wbuttonsize *1.7 + 20;    // % operator gives the remainder of the division
-    y = (ButtonPosition / 5) * hbuttonsize + 20;
-    w = wbuttonsize * 1.2;
-    h = hbuttonsize * 1.2;
-  }
-  else if ((ButtonPosition == 22) || (ButtonPosition == 23)) //Menu Up and Menu down buttons
-  {
-    x = ((ButtonPosition + 1) % 5) * wbuttonsize + 20;  // % operator gives the remainder of the division
-    y = (ButtonPosition / 5) * hbuttonsize + 20;
-    w = wbuttonsize * 0.9;
-    h = hbuttonsize * 1.2;
+    w = wscreen/12;
+    h = hscreen/8;
+
+    if (ButtonPosition <= 9)  // Space bar and < > - Enter, Bkspc
+    {
+      switch (ButtonPosition)
+      {
+      case 0:                   // Space Bar
+          y = 0;
+          x = wscreen * 5 / 24;
+          w = wscreen * 11 /24;
+          break;
+      case 1:                  // Not used
+          y = 0;
+          x = wscreen * 8 / 12;
+          break;
+      case 2:                  // <
+          y = 0;
+          x = wscreen * 9 / 12;
+          break;
+      case 3:                  // >
+          y = 0;
+          x = wscreen * 10 / 12;
+          break;
+      case 4:                  // -
+          y = 0;
+          x = wscreen * 11 / 12;
+          break;
+      case 5:                  // Not used
+          y = 0;
+          x = wscreen * 8 / 12;
+          break;
+      case 6:                 // Left Shift
+          y = hscreen/8;
+          x = 0;
+          break;
+      case 7:                 // Right Shift
+          y = hscreen/8;
+          x = wscreen * 11 / 12;
+          break;
+      case 8:                 // Enter
+          y = 2 * hscreen/8;
+          x = wscreen * 10 / 12;
+          w = 2 * wscreen/12;
+          h = 2 * hscreen/8;
+          break;
+      case 9:
+          y = 4 * hscreen / 8;
+          x = wscreen * 21 / 24;
+          w = 3 * wscreen/24;
+          break;
+      }
+    }
+    if ((ButtonPosition >= 10) && (ButtonPosition <= 19))  // ZXCVBNM,./
+    {
+      y = hscreen/8;
+      x = (ButtonPosition - 9) * wscreen/12;
+    }
+    if ((ButtonPosition >= 20) && (ButtonPosition <= 29))  // ASDFGHJKL
+    {
+      y = 2 * hscreen / 8;
+      x = (ButtonPosition - 19.5) * wscreen/12;
+    }
+    if ((ButtonPosition >= 30) && (ButtonPosition <= 39))  // QWERTYUIOP
+    {
+      y = 3 * hscreen / 8;
+      x = (ButtonPosition - 30) * wscreen/12;
+    }
+    if ((ButtonPosition >= 40) && (ButtonPosition <= 49))  // 1234567890
+    {
+      y = 4 * hscreen / 8;
+      x = (ButtonPosition - 39.5) * wscreen/12;
+    }
   }
 
   button_t *NewButton=&(ButtonArray[ButtonIndex]);
@@ -1462,6 +1683,16 @@ void DrawButton(int ButtonIndex)
 {
   button_t *Button=&(ButtonArray[ButtonIndex]);
 
+  if (CurrentMenu == 41)
+  {
+    StrokeWidth(2);
+    Stroke(150, 150, 200, 0.8);
+  }
+  else
+  {
+    StrokeWidth(0);
+  }
+
   Fill(Button->Status[Button->NoStatus].Color.r, Button->Status[Button->NoStatus].Color.g, Button->Status[Button->NoStatus].Color.b, 1);
   Roundrect(Button->x,Button->y,Button->w,Button->h, Button->w/10, Button->w/10);
   Fill(255, 255, 255, 1);				   // White text
@@ -1470,7 +1701,7 @@ void DrawButton(int ButtonIndex)
   strcpy(label, Button->Status[Button->NoStatus].Text);
   char find = '^';                                  // Line separator is ^
   const char *ptr = strchr(label, find);            // pointer to ^ in string
-  if(ptr)                                           // if ^ found then 2 lines
+  if((ptr) && (CurrentMenu != 41))                                           // if ^ found then 2 lines
   {
     int index = ptr - label;                        // Position of ^ in string
     char line1[15];
@@ -1488,12 +1719,16 @@ void DrawButton(int ButtonIndex)
       Fill(255, 255, 255, 1);				   // White text
       TextMid(Button->x+Button->w/2, Button->y+Button->h* 3/16, line2, SansTypeface, 18);
     }
-}
+  }
   else                                              // One line only
   {
     if (CurrentMenu <= 10)
     {
       TextMid(Button->x+Button->w/2, Button->y+Button->h/2, label, SansTypeface, Button->w/strlen(label));
+    }
+    else if (CurrentMenu == 41)
+    {
+       TextMid(Button->x+Button->w/2, Button->y+Button->h/2 - hscreen / 64, label, SansTypeface, 24);
     }
     else // fix text size at 18
     {
@@ -1512,34 +1747,6 @@ int GetButtonStatus(int ButtonIndex)
 {
   button_t *Button=&(ButtonArray[ButtonIndex]);
   return Button->NoStatus;
-}
-
-void GetNextPicture(char *PictureName)
-{
-
-	DIR           *d;
- 	struct dirent *dir;
-
-  	d = opendir(ImageFolder);
-  	if (d)
-  	{
-    	while ((dir = readdir(d)) != NULL)
-    	{
-		if (dir->d_type == DT_REG)
-		{
-			size_t len = strlen(dir->d_name);
-    			if( len > 4 && strcmp(dir->d_name + len - 4, ".jpg") == 0)
-			{
-    				 printf("%s\n", dir->d_name);
-
-				strncpy(PictureName,dir->d_name,strlen(dir->d_name)-4);
-				break;
-			}
-  		}
-      	}
-
-    	closedir(d);
-	}
 }
 
 int openTouchScreen(int NoDevice)
@@ -1715,7 +1922,7 @@ void UpdateWindow()
   first = ButtonNumber(CurrentMenu, 0);
   last = ButtonNumber(CurrentMenu + 1 , 0) - 1;
 
-  if ((CurrentMenu >= 11) && (CurrentMenu <= 30))  // 10-button menus
+  if ((CurrentMenu >= 11) && (CurrentMenu <= 40))  // 10-button menus
   {
     Fill(127, 127, 127, 1);
     Roundrect(10, 10, wscreen-18, hscreen*2/6+10, 10, 10);
@@ -1807,7 +2014,7 @@ void ApplyTXConfig()
   }
   // Now save the change and make sure that all the config is correct
   char Param[] = "modeinput";
-  SetConfigParam(PATH_CONFIG, Param, ModeInput);
+  SetConfigParam(PATH_PCONFIG, Param, ModeInput);
   printf("a.sh will be called with %s\n", ModeInput);
 
   // Load the Pi Cam driver for CAMMPEG-2 modes
@@ -1822,7 +2029,7 @@ void ApplyTXConfig()
 
 void GreyOut1()
 {
-  // Called at the top of any StartHighlights to grey out inappropriate selections
+  // Called at the top of any StartHighlight1 to grey out inappropriate selections
   if (CurrentMenu == 1)
   {
     if (strcmp(CurrentTXMode, "Carrier") == 0)
@@ -1832,21 +2039,32 @@ void GreyOut1()
       SetButtonStatus(ButtonNumber(CurrentMenu, 19), 2); // Source
       SetButtonStatus(ButtonNumber(CurrentMenu, 11), 2); // SR
       SetButtonStatus(ButtonNumber(CurrentMenu, 12), 2); // FEC
+      SetButtonStatus(ButtonNumber(CurrentMenu, 7), 2); // Audio
+      SetButtonStatus(ButtonNumber(CurrentMenu, 6), 2); // Caption
+      SetButtonStatus(ButtonNumber(CurrentMenu, 6), 2); // EasyCap
     }
     else
     {
       SetButtonStatus(ButtonNumber(CurrentMenu, 16), 0); // Encoder
       SetButtonStatus(ButtonNumber(CurrentMenu, 11), 0); // SR
       SetButtonStatus(ButtonNumber(CurrentMenu, 12), 0); // FEC
+      SetButtonStatus(ButtonNumber(CurrentMenu, 7), 0); // Audio
+      SetButtonStatus(ButtonNumber(CurrentMenu, 6), 0); // Caption
+      SetButtonStatus(ButtonNumber(CurrentMenu, 6), 0); // EasyCap
+      
       if (strcmp(CurrentEncoding, "IPTS in") == 0)
       {
         SetButtonStatus(ButtonNumber(CurrentMenu, 18), 2); // Format
         SetButtonStatus(ButtonNumber(CurrentMenu, 19), 2); // Source
+        SetButtonStatus(ButtonNumber(CurrentMenu, 6), 2); // Caption
+        SetButtonStatus(ButtonNumber(CurrentMenu, 6), 2); // EasyCap
       }
       else
       {
         SetButtonStatus(ButtonNumber(CurrentMenu, 18), 0); // Format
         SetButtonStatus(ButtonNumber(CurrentMenu, 19), 0); // Source
+        SetButtonStatus(ButtonNumber(CurrentMenu, 6), 0); // Caption
+        SetButtonStatus(ButtonNumber(CurrentMenu, 6), 0); // EasyCap
       }
       if (strcmp(CurrentEncoding, "MPEG-2") == 0)
       {
@@ -1862,13 +2080,20 @@ void GreyOut1()
       || (strcmp(CurrentModeOP, "IP") == 0))
     {
       SetButtonStatus(ButtonNumber(CurrentMenu, 10), 2); // Frequency
+      SetButtonStatus(ButtonNumber(CurrentMenu, 13), 2); // Band
+      SetButtonStatus(ButtonNumber(CurrentMenu, 14), 2); // Attenuator Level
+      SetButtonStatus(ButtonNumber(CurrentMenu, 8), 2); // Attenuator Type
     }
     else
     {
       SetButtonStatus(ButtonNumber(CurrentMenu, 10), 0); // Frequency
+      SetButtonStatus(ButtonNumber(CurrentMenu, 13), 0); // Band
+      SetButtonStatus(ButtonNumber(CurrentMenu, 14), 0); // Attenuator Level
+      SetButtonStatus(ButtonNumber(CurrentMenu, 8), 0); // Attenuator Type
     }
   }
 }
+
 void GreyOut15()
 {
   if (strcmp(CurrentEncoding, "H264") == 0)
@@ -1957,7 +2182,7 @@ void SelectOP(int NoButton)      // Output device
   strcpy(ModeOP, TabModeOP[NoButton - 5]);
   printf("************** Set Output Mode = %s\n",ModeOP);
   char Param[]="modeoutput";
-  SetConfigParam(PATH_CONFIG, Param, ModeOP);
+  SetConfigParam(PATH_PCONFIG, Param, ModeOP);
 
   // Set the Current Mode Output variable
   strcpy(CurrentModeOP, TabModeOP[NoButton - 5]);
@@ -1985,11 +2210,20 @@ void SelectSource(int NoButton)  // Video Source
 
 void SelectFreq(int NoButton)  //Frequency
 {
+  char freqtxt[255];
+
   SelectInGroupOnMenu(CurrentMenu, 5, 9, NoButton, 1);
+  SelectInGroupOnMenu(CurrentMenu, 0, 3, NoButton, 1);
+  if (NoButton < 4)
+  {
+    NoButton = NoButton + 10;
+  }
   strcpy(freqtxt, TabFreq[NoButton - 5]);
   char Param[] = "freqoutput";
   printf("************** Set Frequency = %s\n",freqtxt);
-  SetConfigParam(PATH_CONFIG, Param, freqtxt);
+  SetConfigParam(PATH_PCONFIG, Param, freqtxt);
+
+  DoFreqChange();
 
   // Set the Band (and filter) Switching
   system ("sudo /home/pi/rpidatv/scripts/ctlfilter.sh");
@@ -2000,12 +2234,17 @@ void SelectFreq(int NoButton)  //Frequency
 void SelectSR(int NoButton)  // Symbol Rate
 {
   SelectInGroupOnMenu(CurrentMenu, 5, 9, NoButton, 1);
+  SelectInGroupOnMenu(CurrentMenu, 0, 3, NoButton, 1);
+  if (NoButton < 4)
+  {
+    NoButton = NoButton + 10;
+  }
   SR = TabSR[NoButton - 5];
   char Param[] = "symbolrate";
   char Value[255];
   sprintf(Value, "%d", SR);
   printf("************** Set SR = %s\n",Value);
-  SetConfigParam(PATH_CONFIG, Param, Value);
+  SetConfigParam(PATH_PCONFIG, Param, Value);
 }
 
 void SelectFec(int NoButton)  // FEC
@@ -2019,7 +2258,7 @@ void SelectFec(int NoButton)  // FEC
   char Value[255];
   sprintf(Value, "%d", fec);
   printf("************** Set FEC = %s\n",Value);
-  SetConfigParam(PATH_CONFIG, Param, Value);
+  SetConfigParam(PATH_PCONFIG, Param, Value);
 }
 
 void SelectPTT(int NoButton,int Status)  // TX/RX
@@ -2027,26 +2266,18 @@ void SelectPTT(int NoButton,int Status)  // TX/RX
   SelectInGroup(20, 21, NoButton, Status);
 }
 
-/*
-  char Param[]="caption";
-  char Value[255];
-  char Feedback[7];
-  strcpy(Param,"caption");
-  GetConfigParam(PATH_CONFIG, Param, Value);
-*/
-
 void SelectCaption(int NoButton)  // Caption on or off
 {
-  char Param[]="caption";
+  char Param[10]="caption";
   if(NoButton == 5)
   {
     strcpy(CurrentCaptionState, "off");
-    SetConfigParam(PATH_CONFIG,Param,"off");
+    SetConfigParam(PATH_PCONFIG,Param,"off");
   }
   if(NoButton == 6)
   {
     strcpy(CurrentCaptionState, "on");
-    SetConfigParam(PATH_CONFIG,Param,"on");
+    SetConfigParam(PATH_PCONFIG,Param,"on");
   }
   SelectInGroupOnMenu(CurrentMenu, 5, 6, NoButton, 1);
   printf("************** Set Caption %s \n", CurrentCaptionState);
@@ -2061,7 +2292,7 @@ void SelectSTD(int NoButton)  // PAL or NTSC
   strcpy(ModeSTD, TabModeSTD[NoButton - 8]);
   printf("************** Set Input Standard = %s\n", ModeSTD);
   strcpy(Param, "analogcamstandard");
-  SetConfigParam(PATH_CONFIG,Param,ModeSTD);
+  SetConfigParam(PATH_PCONFIG,Param,ModeSTD);
 
   // Now Set the Analog Capture (input) Standard
   GetUSBVidDev(USBVidDevice);
@@ -2077,6 +2308,281 @@ void SelectSTD(int NoButton)  // PAL or NTSC
   }
 }
 
+void ChangeBandDetails(NoButton)
+{
+  char Param[31];
+  char Value[31];
+  char Prompt[63];
+  float AttenLevel = 1;
+  int ExpLevel = -1;
+  int ExpPorts = -1;
+  float LO = 1000001;
+  char Numbers[10] ="";
+  //char PromptBand[15];
+  int band;
+
+  // Convert button number to band number
+  band = NoButton + 5;  // this is correct only for lower line of buttons
+  if (NoButton > 4)     // Upper line of buttons
+  {
+    band = NoButton - 5;
+  }
+
+  // Label
+  strcpy(Param, TabBand[band]);
+  strcat(Param, "label");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  snprintf(Prompt, 63, "Enter the title for Band %d (no spaces!):", band + 1);
+  Keyboard(Prompt, Value, 15);
+  SetConfigParam(PATH_PPRESETS ,Param, KeyboardReturn);
+  strcpy(TabBandLabel[band], KeyboardReturn);
+
+  // Attenuator Level
+  strcpy(Param, TabBand[band]);
+  strcat(Param, "attenlevel");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  while ((AttenLevel > 0) || (AttenLevel < -31.75))
+  {
+    snprintf(Prompt, 63, "Set the Attenuator Level for the %s Band:", TabBandLabel[band]);
+    Keyboard(Prompt, Value, 6);
+    AttenLevel = atof(KeyboardReturn);
+  }
+  TabBandAttenLevel[band] = AttenLevel;
+  SetConfigParam(PATH_PPRESETS ,Param, KeyboardReturn);
+
+  // Express Level
+  strcpy(Param, TabBand[band]);
+  strcat(Param, "explevel");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  while ((ExpLevel < 0) || (ExpLevel > 44))
+  {
+    snprintf(Prompt, 63, "Set the Express Level for the %s Band:", TabBandLabel[band]);
+    Keyboard(Prompt, Value, 2);
+    ExpLevel = atoi(KeyboardReturn);
+  }
+  TabBandExpLevel[band] = ExpLevel;
+  SetConfigParam(PATH_PPRESETS ,Param, KeyboardReturn);
+
+  // Express ports
+  strcpy(Param, TabBand[band]);
+  strcat(Param, "expports");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  while ((ExpPorts < 0) || (ExpPorts > 15))
+  {
+    snprintf(Prompt, 63, "Enter Express Port Settings for the %s Band:", TabBandLabel[band]);
+    Keyboard(Prompt, Value, 2);
+    ExpPorts = atoi(KeyboardReturn);
+  }
+  TabBandExpPorts[band] = ExpPorts;
+  SetConfigParam(PATH_PPRESETS ,Param, KeyboardReturn);
+
+  // LO frequency
+  strcpy(Param, TabBand[band]);
+  strcat(Param, "lo");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  while (LO > 1000000)
+  {
+    snprintf(Prompt, 63, "Enter LO frequency in MHz for the %s Band:", TabBandLabel[band]);
+    Keyboard(Prompt, Value, 10);
+    LO = atof(KeyboardReturn);
+  }
+  TabBandLO[band] = LO;
+  SetConfigParam(PATH_PPRESETS ,Param, KeyboardReturn);
+
+  // Contest Numbers
+  strcpy(Param, TabBand[band]);
+  strcat(Param, "numbers");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  while (strlen(Numbers) < 1)
+  {
+    snprintf(Prompt, 63, "Enter Contest Numbers for the %s Band:", TabBandLabel[band]);
+    Keyboard(Prompt, Value, 10);
+    strcpy(Numbers, KeyboardReturn);
+  }
+  strcpy(TabBandNumbers[band], Numbers);
+  SetConfigParam(PATH_PPRESETS ,Param, Numbers);
+
+  // Then, if it is the current band, call DoFreqChange
+  if (band == CurrentBand)
+  {
+    DoFreqChange();
+  }
+}
+
+void DoFreqChange()
+{
+  // Called after any frequency or band change or band parameter change
+  // to set the correct band levels and numbers in portsdown_config.txt
+  // Transverter band must be correct on entry.
+  // However, this changes direct bands based on the new frequency
+
+  char Param[15];
+  char Value[15];
+  //char Freqtext[255];
+  float CurrentFreq;
+
+  // Look up the current band
+  strcpy(Param,"band");
+  GetConfigParam(PATH_PCONFIG, Param, Value);
+  if ((strcmp(Value, TabBand[0]) == 0) || (strcmp(Value, TabBand[1]) == 0)
+   || (strcmp(Value, TabBand[2]) == 0) || (strcmp(Value, TabBand[3]) == 0)
+   || (strcmp(Value, TabBand[4]) == 0))   // Not a transverter
+  {
+    // So look up the current frequency
+    strcpy(Param,"freqoutput");
+    GetConfigParam(PATH_PCONFIG, Param, Value);
+    CurrentFreq = atof(Value);
+
+    printf("DoFreqChange thinks freq is %f\n", CurrentFreq);
+
+    if (CurrentFreq < 100)                            // 71 MHz
+    {
+       CurrentBand = 0;
+    }
+    if ((CurrentFreq >= 100) && (CurrentFreq < 250))  // 146 MHz
+    {
+      CurrentBand = 1;
+    }
+    if ((CurrentFreq >= 250) && (CurrentFreq < 950))  // 437 MHz
+    {
+      CurrentBand = 2;
+    }
+    if ((CurrentFreq >= 950) && (CurrentFreq <2000))  // 1255 MHz
+    {
+      CurrentBand = 3;
+    }
+    if (CurrentFreq >= 2000)                          // 2400 MHz
+    {
+      CurrentBand = 4;
+    }
+  }
+  // CurrentBand now holds the in-use band 
+
+  // Set the correct band in portsdown_config.txt
+  strcpy(Param,"band");    
+  SetConfigParam(PATH_PCONFIG, Param, TabBand[CurrentBand]);
+
+  // Read each Band value in turn from PPresets
+  // Then set Current variables and
+  // write correct values to portsdown_config.txt
+
+  // Band Label
+  strcpy(Param, TabBand[CurrentBand]);
+  strcat(Param, "label");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+
+  strcpy(Param, "labelofband");
+  SetConfigParam(PATH_PCONFIG, Param, Value);
+  
+  // Attenuator Level
+  strcpy(Param, TabBand[CurrentBand]);
+  strcat(Param, "attenlevel");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+
+  TabBandAttenLevel[CurrentBand] = atof(Value);
+
+  strcpy(Param, "attenlevel");
+  SetConfigParam(PATH_PCONFIG ,Param, Value);
+  
+  // Express Level
+  strcpy(Param, TabBand[CurrentBand]);
+  strcat(Param, "explevel");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+ 
+  TabBandExpLevel[CurrentBand] = atoi(Value);
+
+  strcpy(Param, "explevel");
+  SetConfigParam(PATH_PCONFIG ,Param, Value);
+
+  // Express Ports
+  strcpy(Param, TabBand[CurrentBand]);
+  strcat(Param, "expports");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+ 
+  TabBandExpPorts[CurrentBand] = atoi(Value);
+
+  strcpy(Param, "expports");
+  SetConfigParam(PATH_PCONFIG ,Param, Value);
+
+  // LO frequency
+  strcpy(Param, TabBand[CurrentBand]);
+  strcat(Param, "lo");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+
+  TabBandLO[CurrentBand] = atoi(Value);
+
+  strcpy(Param, "lo");
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+
+  // Contest Numbers
+  strcpy(Param, TabBand[CurrentBand]);
+  strcat(Param, "numbers");
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+
+  strcpy(TabBandNumbers[CurrentBand], Value);
+
+  strcpy(Param, "numbers");
+  SetConfigParam(PATH_PCONFIG ,Param, Value);
+}
+
+void SelectBand(int NoButton)  // Set the Band
+{
+  char Param[15];
+  char Value[15];
+  float CurrentFreq;
+  strcpy(Param,"freqoutput");
+  GetConfigParam(PATH_PCONFIG,Param,Value);
+  CurrentFreq = atof(Value);
+
+  SelectInGroupOnMenu(CurrentMenu, 0, 9, NoButton, 1);
+
+  // Translate Button number to band index
+  if (NoButton == 5)
+  {
+    if (CurrentFreq < 100)                            // 71 MHz
+    {
+       CurrentBand = 0;
+    }
+    if ((CurrentFreq >= 100) && (CurrentFreq < 250))  // 146 MHz
+    {
+      CurrentBand = 1;
+    }
+    if ((CurrentFreq >= 250) && (CurrentFreq < 950))  // 437 MHz
+    {
+      CurrentBand = 2;
+    }
+    if ((CurrentFreq >= 950) && (CurrentFreq <2000))  // 1255 MHz
+    {
+      CurrentBand = 3;
+    }
+    if (CurrentFreq >= 2000)                          // 2400 MHz
+    {
+      CurrentBand = 4;
+    }
+  }
+  else
+  {
+    CurrentBand = NoButton + 5;
+  }
+
+  // Look up the name of the new Band
+  strcpy(Value, TabBand[CurrentBand]);
+
+  // Store the new band
+  printf("************** Set Band = %s\n", Value);
+  strcpy(Param,"band");
+  SetConfigParam(PATH_PCONFIG, Param, Value);
+
+
+  // Make all the changes required after a band change
+  DoFreqChange();
+
+  // Set the Band (and filter) Switching
+  system ("sudo /home/pi/rpidatv/scripts/ctlfilter.sh");
+  // and wait for it to finish using portsdown_config.txt
+  usleep(100000);
+}
+
 void SelectVidIP(int NoButton)  // Comp Vid or S-Video
 {
   char USBVidDevice[255];
@@ -2087,7 +2593,7 @@ void SelectVidIP(int NoButton)  // Comp Vid or S-Video
   strcpy(ModeVidIP, TabModeVidIP[NoButton - 5]);
   printf("************** Set Input socket= %s\n", ModeVidIP);
   strcpy(Param, "analogcaminput");
-  SetConfigParam(PATH_CONFIG,Param,ModeVidIP);
+  SetConfigParam(PATH_PCONFIG,Param,ModeVidIP);
 
   // Now Set the Analog Capture (input) Socket
   //format v4l2-ctl -d $ANALOGCAMNAME --set-input=$ANALOGCAMINPUT
@@ -2111,7 +2617,7 @@ void SelectAudio(int NoButton)  // Audio Input
   strcpy(ModeAudio, TabModeAudio[NoButton - 5]);
   printf("************** Set Audio Input = %s\n",ModeAudio);
   char Param[]="audio";
-  SetConfigParam(PATH_CONFIG,Param,ModeAudio);
+  SetConfigParam(PATH_PCONFIG,Param,ModeAudio);
 }
 
 void SelectAtten(int NoButton)  // Attenuator Type
@@ -2120,7 +2626,200 @@ void SelectAtten(int NoButton)  // Attenuator Type
   strcpy(CurrentAtten, TabAtten[NoButton - 5]);
   printf("************** Set Attenuator = %s\n", CurrentAtten);
   char Param[]="attenuator";
-  SetConfigParam(PATH_CONFIG, Param, CurrentAtten);
+  SetConfigParam(PATH_PCONFIG, Param, CurrentAtten);
+}
+
+void SetAttenLevel()
+{
+  char Prompt[63];
+  char Value[31];
+  char Param[15];
+  int ExpLevel = -1;
+  float AttenLevel = 1;
+
+  if (strcmp(CurrentModeOP, "DATVEXPRESS") == 0)
+  {
+    while ((ExpLevel < 0) || (ExpLevel > 44))
+    {
+      snprintf(Prompt, 62, "Set the Express Output Level for the %s Band:", TabBandLabel[CurrentBand]);
+      snprintf(Value, 3, "%d", TabBandExpLevel[CurrentBand]);
+      Keyboard(Prompt, Value, 2);
+      ExpLevel = atoi(KeyboardReturn);
+    }
+    TabBandExpLevel[CurrentBand] = ExpLevel;
+    strcpy(Param, TabBand[CurrentBand]);
+    strcat(Param, "explevel");
+    SetConfigParam(PATH_PPRESETS, Param, KeyboardReturn);
+    strcpy(Param, "explevel");
+    SetConfigParam(PATH_PCONFIG, Param, KeyboardReturn);
+  }
+  else
+  {
+    while ((AttenLevel > 0) || (AttenLevel < -31.75))
+    {
+      snprintf(Prompt, 62, "Set the Attenuator Level for the %s Band:", TabBandLabel[CurrentBand]);
+      snprintf(Value, 7, "%f", TabBandAttenLevel[CurrentBand]);
+      Keyboard(Prompt, Value, 6);
+      AttenLevel = atof(KeyboardReturn);
+    }
+    TabBandAttenLevel[CurrentBand] = AttenLevel;
+    strcpy(Param, TabBand[CurrentBand]);
+    strcat(Param, "attenlevel");
+    SetConfigParam(PATH_PPRESETS, Param, KeyboardReturn);
+    strcpy(Param, "attenlevel");
+    SetConfigParam(PATH_PCONFIG, Param, KeyboardReturn);
+  }
+}
+
+void SavePreset(int PresetButton)
+{
+  char Param[255];
+  char Value[255];
+  char Prompt[63];
+
+  // Read the Preset Label and ask for a new value
+  snprintf(Prompt, 62, "Enter the new label for preset%d:", PresetButton + 1);
+  strcpy(Value, "");
+  snprintf(Param, 10, "p%dlabel", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  Keyboard(Prompt, Value, 10);
+  SetConfigParam(PATH_PPRESETS, Param, KeyboardReturn);
+  strcpy(TabPresetLabel[PresetButton], KeyboardReturn);
+
+  // Save the current frequency to Preset
+  strcpy(Value, "");
+  strcpy(Param, "freqoutput");
+  GetConfigParam(PATH_PCONFIG, Param, Value);
+  snprintf(Param, 10, "p%dfreq", PresetButton + 1);
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+
+  // Save the current band to Preset
+  strcpy(Value, "");
+  strcpy(Param, "band");
+  GetConfigParam(PATH_PCONFIG, Param, Value);
+  snprintf(Param, 10, "p%dband", PresetButton + 1);
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+
+  // Save the current mode to Preset
+  strcpy(Value, CurrentTXMode);
+  snprintf(Param, 10, "p%dmode", PresetButton + 1);
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+
+  // Save the current encoder to Preset
+  strcpy(Value, CurrentEncoding);
+  snprintf(Param, 10, "p%dencoder", PresetButton + 1);
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+
+  // Save the current format to Preset
+  strcpy(Value, CurrentFormat);
+  snprintf(Param, 10, "p%dformat", PresetButton + 1);
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+
+  // Save the current source to Preset
+  strcpy(Value, CurrentSource);
+  snprintf(Param, 10, "p%dsource", PresetButton + 1);
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+
+  // Save the current output device to Preset
+  strcpy(Value, "");
+  strcpy(Param, "modeoutput");
+  GetConfigParam(PATH_PCONFIG, Param, Value);
+  snprintf(Param, 10, "p%doutput", PresetButton + 1);
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+
+  // Save the current SR to Preset
+  strcpy(Value, "");
+  strcpy(Param, "symbolrate");
+  GetConfigParam(PATH_PCONFIG, Param, Value);
+  snprintf(Param, 10, "p%dsr", PresetButton + 1);
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+
+  // Save the current FEC to Preset
+  strcpy(Value, "");
+  strcpy(Param, "fec");
+  GetConfigParam(PATH_PCONFIG, Param, Value);
+  snprintf(Param, 10, "p%dfec", PresetButton + 1);
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+
+  // Save the current audio setting to Preset
+  strcpy(Value, "");
+  strcpy(Param, "audio");
+  GetConfigParam(PATH_PCONFIG, Param, Value);
+  snprintf(Param, 10, "p%daudio", PresetButton + 1);
+  SetConfigParam(PATH_PPRESETS, Param, Value);
+}
+
+void RecallPreset(int PresetButton)
+{
+  char Param[255];
+  char Value[255];
+
+  // Read Preset Frequency and store in portsdown_config (not in memory)
+  strcpy(Value, "");
+  snprintf(Param, 10, "p%dfreq", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  SetConfigParam(PATH_PCONFIG, "freqoutput", Value);
+
+  // Read Preset Band and store in portsdown_config and in memory
+  strcpy(Value, "");
+  snprintf(Param, 10, "p%dband", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  SetConfigParam(PATH_PCONFIG, "band", Value);
+  ReadBand();   //Sets CurrentBand consistently from saved freqoutput and band
+
+  // Read modulation, encoding, format and source
+
+  strcpy(Value, "");
+  snprintf(Param, 10, "p%dmode", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  strcpy(CurrentTXMode, Value);
+
+  strcpy(Value, "");
+  snprintf(Param, 15, "p%dencoder", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  strcpy(CurrentEncoding, Value);
+
+  strcpy(Value, "");
+  snprintf(Param, 15, "p%dformat", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  strcpy(CurrentFormat, Value);
+
+  strcpy(Value, "");
+  snprintf(Param, 15, "p%dsource", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  strcpy(CurrentSource, Value);
+
+  // Decode them and set modeinput in memory and portsdown_config
+  ApplyTXConfig();
+
+  // Read Output Device
+  strcpy(Value, "");
+  snprintf(Param, 15, "p%doutput", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  SetConfigParam(PATH_PCONFIG, "modeoutput", Value);
+  strcpy(Value, "");
+  ReadModeOutput(Value);  // Set CurrentModeOP and CurrentModeOPtest
+
+  // Read SR
+  strcpy(Value, "");
+  snprintf(Param, 15, "p%dsr", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  SetConfigParam(PATH_PCONFIG, "symbolrate", Value);
+  SR = atoi(Value);
+
+  // Read FEC
+  strcpy(Value, "");
+  snprintf(Param, 15, "p%dfec", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  SetConfigParam(PATH_PCONFIG, "fec", Value);
+  fec = atoi(Value);
+  
+  // Read Audio setting
+  strcpy(Value, "");
+  snprintf(Param, 15, "p%daudio", PresetButton + 1);
+  GetConfigParam(PATH_PPRESETS, Param, Value);
+  SetConfigParam(PATH_PCONFIG, "audio", Value);
+  strcpy(ModeAudio, Value);
 }
 
 void TransmitStart()
@@ -2133,7 +2832,7 @@ void TransmitStart()
   #define PATH_SCRIPT_A "sudo /home/pi/rpidatv/scripts/a.sh >/dev/null 2>/dev/null"
 
   strcpy(Param,"modeinput");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   strcpy(ModeInput,Value);
 
   // Check if MPEG-2 camera mode selected 
@@ -2180,11 +2879,11 @@ void TransmitStart()
 
     // Check if Caption enabled.  If so draw caption on image and display
     strcpy(Param,"caption");
-    GetConfigParam(PATH_CONFIG,Param,Value);
+    GetConfigParam(PATH_PCONFIG,Param,Value);
     if(strcmp(Value,"on")==0)
     {
       strcpy(Param,"call");
-      GetConfigParam(PATH_CONFIG,Param,Value);
+      GetConfigParam(PATH_PCONFIG,Param,Value);
       system("rm /home/pi/rpidatv/scripts/images/caption.png >/dev/null 2>/dev/null");
       system("rm /home/pi/rpidatv/scripts/images/tcf2.jpg >/dev/null 2>/dev/null");
       strcpy(Cmd, "convert -size 720x80 xc:transparent -fill white -gravity Center -pointsize 40 -annotate 0 \"");
@@ -2217,7 +2916,7 @@ void TransmitStop()
   // Stop DATV Express transmitting
   char expressrx[50];
   strcpy(Param,"modeoutput");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   strcpy(ModeOutput,Value);
   if(strcmp(ModeOutput,"DATVEXPRESS")==0)
   {
@@ -2656,13 +3355,13 @@ void InfoScreen()
   //strcat(PowerText,"End");
 
   char TXParams1[256] = "TX ";
-  GetConfigParam(PATH_CONFIG,"freqoutput",result);
+  GetConfigParam(PATH_PCONFIG,"freqoutput",result);
   strcat(TXParams1, result);
   strcat(TXParams1, " MHz  SR ");
-  GetConfigParam(PATH_CONFIG,"symbolrate",result);
+  GetConfigParam(PATH_PCONFIG,"symbolrate",result);
   strcat(TXParams1, result);
   strcat(TXParams1, "  FEC ");
-  GetConfigParam(PATH_CONFIG,"fec",result);
+  GetConfigParam(PATH_PCONFIG,"fec",result);
   strcat(TXParams1, result);
   strcat(TXParams1, "/");
   sprintf(result, "%d", atoi(result)+1);
@@ -2980,7 +3679,7 @@ void do_videoview()
     pthread_create (&thview,NULL, &WaitButtonEvent,NULL);
 
     strcpy(Param,"display");
-    GetConfigParam(PATH_CONFIG,Param,Value);
+    GetConfigParam(PATH_PCONFIG,Param,Value);
     if ((strcmp(Value,"Waveshare")==0) || (strcmp(Value,"Waveshare4")==0))
     // Write directly to the touchscreen framebuffer for Waveshare displays
     {
@@ -3086,6 +3785,471 @@ static void cleanexit(int exit_code)
   exit(exit_code);
 }
 
+void Keyboard(char RequestText[64], char InitText[64], int MaxLength)
+{
+  char EditText[64];
+  strcpy (EditText, InitText);
+  int token;
+  int PreviousMenu;
+  int i;
+  int CursorPos;
+  char thischar[2];
+  int KeyboardShift = 1;
+  int ShiftStatus = 0;
+  char KeyPressed[2];
+  char PreCuttext[63];
+  char PostCuttext[63];
+  
+  printf("Entering Keyboard\n");
+
+  // Store away currentMenu
+  PreviousMenu = CurrentMenu;
+
+  // Set cursor position to next character after EditText
+  CursorPos = strlen(EditText);
+
+  // On initial call set Menu to 41
+  CurrentMenu = 41;
+  Fontinfo font = SansTypeface;
+  int pointsize;
+  int rawX, rawY, rawPressure;
+  Fill(255, 255, 255, 1);    // White text
+
+  for (;;)
+  {
+    BackgroundRGB(0,0,0,255);
+
+    // Display Instruction Text
+    pointsize = 20;
+    Text(wscreen / 24, 7 * hscreen/8 , RequestText, font, pointsize);
+
+    //Draw the cursor
+    Fill(0, 0, 0, 1);    // Black Box
+    StrokeWidth(3);
+    Stroke(255, 255, 255, 0.8);  // White boundary
+    Rect((2*CursorPos+1) * wscreen/48, 10.75 * hscreen / 16, wscreen/288, hscreen/12);
+    StrokeWidth(0);
+
+    // Display Text for Editing
+    pointsize = 30;
+    Fill(255, 255, 255, 1);    // White text
+    for (i = 1; i <= strlen(EditText); i = i + 1)
+    {
+      strncpy(thischar, &EditText[i-1], 1);
+      thischar[1] = '\0';
+      if (i > MaxLength)
+      {
+        Fill(255, 127, 127, 1);    // Red text
+      }
+      TextMid(i * wscreen / 24.0, 11 * hscreen / 16, thischar, font, pointsize);
+    }
+    Fill(255, 255, 255, 1);    // White text
+
+    // Sort Shift changes
+    ShiftStatus = 2 - (2 * KeyboardShift); // 0 = Upper, 2 = lower
+    for (i = ButtonNumber(CurrentMenu, 0); i <= ButtonNumber(CurrentMenu, 49); i = i + 1)
+    {
+      if (ButtonArray[i].IndexStatus > 0)  // If button needs to be drawn
+      {
+        SetButtonStatus(i, ShiftStatus);
+      }
+    }  
+
+    // Display the completed keyboard page
+
+    UpdateWindow();
+
+    if (getTouchSample(&rawX, &rawY, &rawPressure)==0) continue;
+    token = IsMenuButtonPushed(rawX, rawY);
+
+    if (token == 8)  // Enter pressed
+    {
+      if (strlen(EditText) > MaxLength) 
+      {
+        strncpy(KeyboardReturn, &EditText[0], MaxLength);
+        KeyboardReturn[MaxLength] = '\0';
+      }
+      else
+      {
+        strcpy(KeyboardReturn, EditText);
+      }
+      CurrentMenu = PreviousMenu;
+      printf("Exiting KeyBoard with String \"%s\"\n", KeyboardReturn);
+      break;
+    }
+    else
+    {    
+      if (KeyboardShift == 1)     // Upper Case
+      {
+        switch (token)
+        {
+        case 0:  strcpy(KeyPressed, " "); break;
+        case 4:  strcpy(KeyPressed, "-"); break;
+        case 10: strcpy(KeyPressed, "Z"); break;
+        case 11: strcpy(KeyPressed, "X"); break;
+        case 12: strcpy(KeyPressed, "C"); break;
+        case 13: strcpy(KeyPressed, "V"); break;
+        case 14: strcpy(KeyPressed, "B"); break;
+        case 15: strcpy(KeyPressed, "N"); break;
+        case 16: strcpy(KeyPressed, "M"); break;
+        case 17: strcpy(KeyPressed, ","); break;
+        case 18: strcpy(KeyPressed, "."); break;
+        case 19: strcpy(KeyPressed, "/"); break;
+        case 20: strcpy(KeyPressed, "A"); break;
+        case 21: strcpy(KeyPressed, "S"); break;
+        case 22: strcpy(KeyPressed, "D"); break;
+        case 23: strcpy(KeyPressed, "F"); break;
+        case 24: strcpy(KeyPressed, "G"); break;
+        case 25: strcpy(KeyPressed, "H"); break;
+        case 26: strcpy(KeyPressed, "J"); break;
+        case 27: strcpy(KeyPressed, "K"); break;
+        case 28: strcpy(KeyPressed, "L"); break;
+        case 30: strcpy(KeyPressed, "Q"); break;
+        case 31: strcpy(KeyPressed, "W"); break;
+        case 32: strcpy(KeyPressed, "E"); break;
+        case 33: strcpy(KeyPressed, "R"); break;
+        case 34: strcpy(KeyPressed, "T"); break;
+        case 35: strcpy(KeyPressed, "Y"); break;
+        case 36: strcpy(KeyPressed, "U"); break;
+        case 37: strcpy(KeyPressed, "I"); break;
+        case 38: strcpy(KeyPressed, "O"); break;
+        case 39: strcpy(KeyPressed, "P"); break;
+        case 40: strcpy(KeyPressed, "1"); break;
+        case 41: strcpy(KeyPressed, "2"); break;
+        case 42: strcpy(KeyPressed, "3"); break;
+        case 43: strcpy(KeyPressed, "4"); break;
+        case 44: strcpy(KeyPressed, "5"); break;
+        case 45: strcpy(KeyPressed, "6"); break;
+        case 46: strcpy(KeyPressed, "7"); break;
+        case 47: strcpy(KeyPressed, "8"); break;
+        case 48: strcpy(KeyPressed, "9"); break;
+        case 49: strcpy(KeyPressed, "0"); break;
+        }
+      }
+      else                          // Lower Case
+      {
+        switch (token)
+        {
+        case 0:  strcpy(KeyPressed, " "); break;
+        case 4:  strcpy(KeyPressed, "_"); break;
+        case 10: strcpy(KeyPressed, "z"); break;
+        case 11: strcpy(KeyPressed, "x"); break;
+        case 12: strcpy(KeyPressed, "c"); break;
+        case 13: strcpy(KeyPressed, "v"); break;
+        case 14: strcpy(KeyPressed, "b"); break;
+        case 15: strcpy(KeyPressed, "n"); break;
+        case 16: strcpy(KeyPressed, "m"); break;
+        case 17: strcpy(KeyPressed, "!"); break;
+        case 18: strcpy(KeyPressed, "."); break;
+        case 19: strcpy(KeyPressed, "?"); break;
+        case 20: strcpy(KeyPressed, "a"); break;
+        case 21: strcpy(KeyPressed, "s"); break;
+        case 22: strcpy(KeyPressed, "d"); break;
+        case 23: strcpy(KeyPressed, "f"); break;
+        case 24: strcpy(KeyPressed, "g"); break;
+        case 25: strcpy(KeyPressed, "h"); break;
+        case 26: strcpy(KeyPressed, "j"); break;
+        case 27: strcpy(KeyPressed, "k"); break;
+        case 28: strcpy(KeyPressed, "l"); break;
+        case 30: strcpy(KeyPressed, "q"); break;
+        case 31: strcpy(KeyPressed, "w"); break;
+        case 32: strcpy(KeyPressed, "e"); break;
+        case 33: strcpy(KeyPressed, "r"); break;
+        case 34: strcpy(KeyPressed, "t"); break;
+        case 35: strcpy(KeyPressed, "y"); break;
+        case 36: strcpy(KeyPressed, "u"); break;
+        case 37: strcpy(KeyPressed, "i"); break;
+        case 38: strcpy(KeyPressed, "o"); break;
+        case 39: strcpy(KeyPressed, "p"); break;
+        case 40: strcpy(KeyPressed, "1"); break;
+        case 41: strcpy(KeyPressed, "2"); break;
+        case 42: strcpy(KeyPressed, "3"); break;
+        case 43: strcpy(KeyPressed, "4"); break;
+        case 44: strcpy(KeyPressed, "5"); break;
+        case 45: strcpy(KeyPressed, "6"); break;
+        case 46: strcpy(KeyPressed, "7"); break;
+        case 47: strcpy(KeyPressed, "8"); break;
+        case 48: strcpy(KeyPressed, "9"); break;
+        case 49: strcpy(KeyPressed, "0"); break;
+        }
+      }
+
+      // If shift key has been pressed Change Case
+      if ((token == 6) || (token == 7))
+      {
+        if (KeyboardShift == 1)
+        {
+          KeyboardShift = 0;
+        }
+        else
+        {
+          KeyboardShift = 1;
+        }
+      }
+      else if (token == 9)   // backspace
+      {
+        if (CursorPos == 1)
+        {
+           // Copy the text to the right of the deleted character
+          strncpy(PostCuttext, &EditText[1], strlen(EditText) - 1);
+          PostCuttext[strlen(EditText) - 1] = '\0';
+          strcpy (EditText, PostCuttext);
+          CursorPos = 0;
+        }
+        if (CursorPos > 1)
+        {
+          // Copy the text to the left of the deleted character
+          strncpy(PreCuttext, &EditText[0], CursorPos - 1);
+          PreCuttext[CursorPos-1] = '\0';
+
+          if (CursorPos == strlen(EditText))
+          {
+            strcpy (EditText, PreCuttext);
+          }
+          else
+          {
+            // Copy the text to the right of the deleted character
+            strncpy(PostCuttext, &EditText[CursorPos], strlen(EditText));
+            PostCuttext[strlen(EditText)-CursorPos] = '\0';
+
+            // Now combine them
+            strcat(PreCuttext, PostCuttext);
+            strcpy (EditText, PreCuttext);
+          }
+          CursorPos = CursorPos - 1;
+        }
+      }
+      else if (token == 2)   // left arrow
+      {
+        CursorPos = CursorPos - 1;
+        if (CursorPos < 0)
+        {
+          CursorPos = 0;
+        }
+      }
+      else if (token == 3)   // right arrow
+      {
+        CursorPos = CursorPos + 1;
+        if (CursorPos > strlen(EditText))
+        {
+          CursorPos = strlen(EditText);
+        }
+      }
+      else
+      {
+        // character Key has been touched, so highlight it for 300 ms
+ 
+        ShiftStatus = 3 - (2 * KeyboardShift); // 1 = Upper, 3 = lower
+        SetButtonStatus(ButtonNumber(41, token), ShiftStatus);
+        DrawButton(ButtonNumber(41, token));
+        UpdateWindow();
+        usleep(300000);
+        ShiftStatus = 2 - (2 * KeyboardShift); // 0 = Upper, 2 = lower
+        SetButtonStatus(ButtonNumber(41, token), ShiftStatus);
+        DrawButton(ButtonNumber(41, token));
+        UpdateWindow();
+
+        if (strlen(EditText) < 23) // Don't let it overflow
+        {
+        // Copy the text to the left of the insert point
+        strncpy(PreCuttext, &EditText[0], CursorPos);
+        PreCuttext[CursorPos] = '\0';
+          
+        // Append the new character to the pre-insert string
+        strcat(PreCuttext, KeyPressed);
+
+        // Append any text to the right if it exists
+        if (CursorPos == strlen(EditText))
+        {
+          strcpy (EditText, PreCuttext);
+        }
+        else
+        {
+          // Copy the text to the right of the inserted character
+          strncpy(PostCuttext, &EditText[CursorPos], strlen(EditText));
+          PostCuttext[strlen(EditText)-CursorPos] = '\0';
+
+          // Now combine them
+          strcat(PreCuttext, PostCuttext);
+          strcpy (EditText, PreCuttext);
+        }
+        CursorPos = CursorPos+1;
+        }
+      }
+    }
+  }
+}
+
+void ChangePresetFreq(NoButton)
+{
+  char RequestText[64];
+  char InitText[64];
+  char PresetNo[2];
+  int FreqIndex;
+  float TvtrFreq;
+  float PDfreq;
+  char Param[15] = "pfreq";
+
+  //Convert button number to frequency array index
+  if (NoButton < 4)
+  {
+    FreqIndex = NoButton + 5;
+  }
+  else
+  {
+    FreqIndex = NoButton - 5;
+  }
+
+  //Define request string depending on transverter or not
+  if ((TabBandLO[CurrentBand] < 0.1) && (TabBandLO[CurrentBand] > -0.1))
+  {
+    strcpy(RequestText, "Enter new frequency for Preset ");
+  }
+  else
+  {
+    strcpy(RequestText, "Enter new transmit frequency for Preset ");
+  }
+  snprintf(PresetNo, 2, "%d", FreqIndex + 1);
+  strcat(RequestText, PresetNo);
+  strcat(RequestText, " in MHz:");
+
+  // Calulate initial value
+  if ((TabBandLO[CurrentBand] < 0.1) && (TabBandLO[CurrentBand] > -0.1))
+  {
+    snprintf(InitText, 10, "%s", TabFreq[FreqIndex]);
+  }
+  else
+  {
+    TvtrFreq = atof(TabFreq[FreqIndex]) + TabBandLO[CurrentBand];
+    if (TvtrFreq < 0)
+    {
+      TvtrFreq = TvtrFreq * -1;
+    }
+    snprintf(InitText, 10, "%.1f", TvtrFreq);
+  }
+  
+  Keyboard(RequestText, InitText, 10);
+
+  // Correct freq for transverter offset
+  if ((TabBandLO[CurrentBand] < 0.1) && (TabBandLO[CurrentBand] > -0.1))
+  {
+    ;
+  }
+  else
+  {
+    PDfreq = atof(KeyboardReturn) - TabBandLO[CurrentBand];
+    if (TabBandLO[CurrentBand] < 0)
+    {
+      PDfreq = TabBandLO[CurrentBand] - atof(KeyboardReturn);
+    }
+    snprintf(KeyboardReturn, 10, "%.1f", PDfreq);
+  }
+  
+  // Write freq to tabfreq
+  strcpy(TabFreq[FreqIndex], KeyboardReturn);
+
+  // write freq to Presets file
+  strcat(Param, PresetNo); 
+  printf("Store Preset %s %s\n", Param, KeyboardReturn);
+  SetConfigParam(PATH_PPRESETS, Param, KeyboardReturn);
+
+  // Compose Button Text
+  switch (strlen(TabFreq[FreqIndex]))
+  {
+  case 2:
+    strcpy(FreqLabel[FreqIndex], " ");
+    strcat(FreqLabel[FreqIndex], TabFreq[FreqIndex]);
+    strcat(FreqLabel[FreqIndex], " MHz ");
+    break;
+  case 3:
+    strcpy(FreqLabel[FreqIndex], TabFreq[FreqIndex]);
+    strcat(FreqLabel[FreqIndex], " MHz ");
+    break;
+  case 4:
+    strcpy(FreqLabel[FreqIndex], TabFreq[FreqIndex]);
+    strcat(FreqLabel[FreqIndex], " MHz");
+    break;
+  case 5:
+    strcpy(FreqLabel[FreqIndex], TabFreq[FreqIndex]);
+    strcat(FreqLabel[FreqIndex], "MHz");
+    break;
+  default:
+    strcpy(FreqLabel[FreqIndex], TabFreq[FreqIndex]);
+    strcat(FreqLabel[FreqIndex], " M");
+    break;
+  }
+}
+
+void ChangePresetSR(NoButton)
+{
+  char RequestText[64];
+  char InitText[64];
+  char PresetNo[2];
+  int SRIndex;
+  int SRCheck = 0;
+  color_t Green;
+  color_t Blue;
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  if (NoButton < 4)
+  {
+    SRIndex = NoButton + 5;
+  }
+  else
+  {
+    SRIndex = NoButton - 5;
+  }
+
+  while ((SRCheck < 50) || (SRCheck > 9999))
+  {
+    strcpy(RequestText, "Enter new Symbol Rate for Preset ");
+    snprintf(PresetNo, 2, "%d", SRIndex + 1);
+    strcat(RequestText, PresetNo);
+    strcat(RequestText, " in KS/s:");
+    snprintf(InitText, 5, "%d", TabSR[SRIndex]);
+    Keyboard(RequestText, InitText, 4);
+  
+    // Check valid value
+    SRCheck = atoi(KeyboardReturn);
+  }
+
+  // Update stored value
+  TabSR[SRIndex] = SRCheck;
+
+  // write SR to Presets file
+  char Param[8] = "psr";
+  strcat(Param, PresetNo); 
+  printf("Store Preset %s %s\n", Param, KeyboardReturn);
+  SetConfigParam(PATH_PPRESETS, Param, KeyboardReturn);
+
+  // Compose and update Button Text
+  switch (strlen(KeyboardReturn))
+  {
+  case 2:
+  case 3:
+    strcpy(SRLabel[SRIndex], "SR ");
+    strcat(SRLabel[SRIndex], KeyboardReturn);
+    break;
+  default:
+    strcpy(SRLabel[SRIndex], "SR");
+    strcat(SRLabel[SRIndex], KeyboardReturn);
+    break;
+  }
+
+  // refresh Menu 28 buttons
+
+  AmendButtonStatus(ButtonNumber(28, NoButton), 0, SRLabel[SRIndex], &Blue);
+  AmendButtonStatus(ButtonNumber(28, NoButton), 1, SRLabel[SRIndex], &Green);
+
+  // refresh Menu 17 buttons
+  AmendButtonStatus(ButtonNumber(17, NoButton), 0, SRLabel[SRIndex], &Blue);
+  AmendButtonStatus(ButtonNumber(17, NoButton), 1, SRLabel[SRIndex], &Green);
+
+  // Undo button highlight
+  // SetButtonStatus(ButtonNumber(28, NoButton), 0);
+}
+
 void waituntil(int w,int h)
 {
   // Wait for a screen touch and act on its position
@@ -3176,21 +4340,53 @@ void waituntil(int w,int h)
       if (CurrentMenu == 1)  // Main Menu
       {
         printf("Button Event %d, Entering Menu 1 Case Statement\n",i);
+
+        // Clear Preset store trigger if not a preset
+        if ((i > 4) && (PresetStoreTrigger == 1))
+        {
+          PresetStoreTrigger = 0;
+          SetButtonStatus(4,0);
+          UpdateWindow();
+          continue;
+        }
+
         switch (i)
         {
+
         case 0:
-          UpdateWindow();
-          break;
         case 1:
-          UpdateWindow();
-          break;
         case 2:
-          UpdateWindow();
-          break;
         case 3:
+          if (PresetStoreTrigger == 0)
+          {
+            RecallPreset(i);  // Recall preset
+            // and make sure that everything has been refreshed?
+          }
+          else
+          {
+            SavePreset(i);  // Set preset
+            PresetStoreTrigger = 0;
+            SetButtonStatus(4,0);
+            BackgroundRGB(255,255,255,255);
+          }
+          SetButtonStatus(i, 1);
+          Start_Highlights_Menu1();    // Refresh button labels
+          UpdateWindow();
+          usleep(500000);
+          SetButtonStatus(i, 0); 
           UpdateWindow();
           break;
-        case 4:
+        case 4:                        // Set up to store preset
+          if (PresetStoreTrigger == 0)
+          {
+            PresetStoreTrigger = 1;
+            SetButtonStatus(4,2);
+          }
+          else
+          {
+            PresetStoreTrigger = 0;
+            SetButtonStatus(4,0);
+          }
           UpdateWindow();
           break;
         case 5:
@@ -3246,13 +4442,21 @@ void waituntil(int w,int h)
           UpdateWindow();
           break;
         case 13:                      // Transverter
+          printf("MENU 19 \n");
+          CurrentMenu=19;
+          BackgroundRGB(0,0,0,255);
+          Start_Highlights_Menu19();
           UpdateWindow();
           break;
-        case 14:                       // Level
+        case 14:                              // Level
+          printf("Set Attenuator Level \n");
+          SetAttenLevel();
+          BackgroundRGB(255,255,255,255);
+          Start_Highlights_Menu1();
           UpdateWindow();
           break;
         case 15:
-          printf("MENU 11 \n");        // RF Output Mode
+          printf("MENU 11 \n");        // Modulation
           CurrentMenu=11;
           BackgroundRGB(0,0,0,255);
           Start_Highlights_Menu11();
@@ -3441,62 +4645,28 @@ void waituntil(int w,int h)
 
       if (CurrentMenu == 3)  // Menu 3
       {
-        printf("Button Event %d, Entering Menu 2 Case Statement\n",i);
+        printf("Button Event %d, Entering Menu 3 Case Statement\n",i);
         switch (i)
         {
-        case 0:                               // Exit to Linux (debug only)
-          // cleanexit(128);
+        case 0:                               // 
           break;
-        case 1:                               // Select FreqShow
-          //if(CheckRTL()==0)
-          //{
-          //  cleanexit(131);
-          //}
-          //else
-          //{
-          //  MsgBox("No RTL-SDR Connected");
-          //  wait_touch();
-          //}
-          //BackgroundRGB(0,0,0,255);
-          //UpdateWindow();
+        case 1:                               // 
           break;
-        case 2:                               // Display Info Page
-          //InfoScreen();
-          //BackgroundRGB(0,0,0,255);
-          //UpdateWindow();
+        case 2:                               // 
           break;
-        case 3:                               // Start RTL-TCP server
-          //rtl_tcp();
-          //BackgroundRGB(0,0,0,255);
-          //UpdateWindow();
+        case 3:                               // 
           break;
-        case 4:                               // Start Sig Gen and Exit
-          //cleanexit(130);
+        case 4:                               // 
           break;
-         case 5:                              // RTL Radio 1
-          //rtlradio1();
-          //BackgroundRGB(0,0,0,255);
-          //UpdateWindow();
+         case 5:                              // 
           break;
-        case 6:                              // RTL Radio 2
-          //rtlradio2();
-          //BackgroundRGB(0,0,0,255);
-          //UpdateWindow();
+        case 6:                              // 
           break;
-        case 7:                              // RTL Radio 3
-          //rtlradio3();
-          //BackgroundRGB(0,0,0,255);
-          //UpdateWindow();
-          //break;
-        case 8:                              // RTL Radio 4
-          //rtlradio4();
-          //BackgroundRGB(0,0,0,255);
-          //UpdateWindow();
+        case 7:                              // 
           break;
-        case 9:                              // RTL Radio 5
-          //rtlradio5();
-          //BackgroundRGB(0,0,0,255);
-          //UpdateWindow();
+        case 8:                              // 
+          break;
+        case 9:                              // 
           break;
         case 10:                               // Blank
           break;
@@ -3508,17 +4678,26 @@ void waituntil(int w,int h)
           break;
         case 14:                               // Blank
           break;
-        case 15:                              // Take Snap from EasyCap Input
-          //do_snap();
-          //UpdateWindow();
+        case 15:                              // Set Band Details
+          printf("MENU 26 \n"); 
+          CurrentMenu=26;
+          BackgroundRGB(0,0,0,255);
+          Start_Highlights_Menu26();
+          UpdateWindow();
           break;
-        case 16:                              // View EasyCap Input
-          //do_videoview();
-          //UpdateWindow();
+        case 16:                              // Set Preset Frequencies
+          printf("MENU 27 \n"); 
+          CurrentMenu=27;
+          BackgroundRGB(0,0,0,255);
+          Start_Highlights_Menu27();
+          UpdateWindow();
           break;
-        case 17:                              // Check Snaps
-          //do_snapcheck();
-          //UpdateWindow();
+        case 17:                              // Set Preset SRs
+          printf("MENU 28 \n"); 
+          CurrentMenu=28;
+          BackgroundRGB(0,0,0,255);
+          Start_Highlights_Menu28();
+          UpdateWindow();
           break;
         case 18:                              // Calibrate Touch
           //touchcal();
@@ -3752,25 +4931,17 @@ void waituntil(int w,int h)
           SelectInGroupOnMenu(CurrentMenu, 4, 4, 4, 1);
           printf("SR Cancel\n");
           break;
+        case 0:                               // Freq 6
+        case 1:                               // Freq 7
+        case 2:                               // Freq 8
+        case 3:                               // Freq 9
         case 5:                               // Freq 1
-          SelectFreq(i);
-          printf("Freq 1\n");
-          break;
         case 6:                               // Freq 2
-          SelectFreq(i);
-          printf("Freq 2\n");
-          break;
         case 7:                               // Freq 3
-          SelectFreq(i);
-          printf("Freq 3\n");
-          break;
         case 8:                               // Freq 4
-          SelectFreq(i);
-          printf("Freq 4\n");
-          break;
         case 9:                               // Freq 5
           SelectFreq(i);
-          printf("Freq 5\n");
+          printf("Frequency Button %d\n", i);
           break;
         default:
           printf("Menu 16 Error\n");
@@ -3813,6 +4984,22 @@ void waituntil(int w,int h)
         case 9:                               // SR 5
           SelectSR(i);
           printf("SR 5\n");
+          break;
+        case 0:                               // SR 6
+          SelectSR(i);
+          printf("SR 6\n");
+          break;
+        case 1:                               // SR 7
+          SelectSR(i);
+          printf("SR 7\n");
+          break;
+        case 2:                               // SR 8
+          SelectSR(i);
+          printf("SR 8\n");
+          break;
+        case 3:                               // SR 9
+          SelectSR(i);
+          printf("SR 8\n");
           break;
         default:
           printf("Menu 17 Error\n");
@@ -3869,7 +5056,48 @@ void waituntil(int w,int h)
         UpdateWindow();
         continue;   // Completed Menu 18 action, go and wait for touch
       }
-      // Menu 19 Tverter
+      if (CurrentMenu == 19)  // Menu 19 Transverter
+      {
+        printf("Button Event %d, Entering Menu 19 Case Statement\n",i);
+        switch (i)
+        {
+        case 4:                               // Cancel
+          SelectInGroupOnMenu(CurrentMenu, 4, 4, 4, 1);
+          printf("FEC Cancel\n");
+          break;
+        case 5:                               // Band Direct
+          SelectBand(i);
+          printf("Band Direct\n");
+          break;
+        case 0:                               // Band t1
+          SelectBand(i);
+          printf("Band t1\n");
+          break;
+        case 1:                               // Band t2
+          SelectBand(i);
+          printf("Band t2\n");
+          break;
+        case 2:                               // Band t3
+          SelectBand(i);
+          printf("Band t3\n");
+          break;
+        case 3:                               // Band t4
+          SelectBand(i);
+          printf("Band t4\n");
+          break;
+        default:
+          printf("Menu 19 Error\n");
+        }
+        UpdateWindow();
+        usleep(500000);
+        SelectInGroupOnMenu(CurrentMenu, 4, 4, 4, 0); // Reset cancel (even if not selected)
+        printf("Returning to MENU 1 from Menu 19\n");
+        CurrentMenu=1;
+        BackgroundRGB(255,255,255,255);
+        Start_Highlights_Menu1();
+        UpdateWindow();
+        continue;   // Completed Menu 19 action, go and wait for touch
+      }
       // Menu 20 Level
       if (CurrentMenu == 21)  // Menu 21 EasyCap
       {
@@ -4019,7 +5247,128 @@ void waituntil(int w,int h)
         UpdateWindow();
         continue;   // Completed Menu 24 action, go and wait for touch
       }
-
+      if (CurrentMenu == 26)  // Menu 26 Band Details
+      {
+        printf("Button Event %d, Entering Menu 26 Case Statement\n",i);
+        switch (i)
+        {
+        case 4:                               // Cancel
+          SelectInGroupOnMenu(CurrentMenu, 4, 4, 4, 1);
+          printf("Set Band Details Cancel\n");
+          UpdateWindow();
+          usleep(500000);
+          SelectInGroupOnMenu(CurrentMenu, 4, 4, 4, 0); // Reset cancel (even if not selected)
+          printf("Returning to MENU 1 from Menu 26\n");
+          CurrentMenu=1;
+          BackgroundRGB(255,255,255,255);
+          Start_Highlights_Menu1();
+          UpdateWindow();
+          break;
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+        case 9:
+          printf("Changing Band Details %d\n", i);
+          ChangeBandDetails(i);
+          CurrentMenu=26;
+          BackgroundRGB(0,0,0,255);
+          Start_Highlights_Menu26();
+          printf("Calling UpdateWindow\n");
+          UpdateWindow();
+          break;
+        default:
+          printf("Menu 26 Error\n");
+        }
+        // stay in Menu 26 to set another band
+        continue;   // Completed Menu 26 action, go and wait for touch
+      }
+      if (CurrentMenu == 27)  // Menu 27 Preset Frequencies
+      {
+        printf("Button Event %d, Entering Menu 27 Case Statement\n",i);
+        switch (i)
+        {
+        case 4:                               // Cancel
+          SelectInGroupOnMenu(CurrentMenu, 4, 4, 4, 1);
+          printf("Set Preset Frequency Cancel\n");
+          UpdateWindow();
+          usleep(500000);
+          SelectInGroupOnMenu(CurrentMenu, 4, 4, 4, 0); // Reset cancel (even if not selected)
+          printf("Returning to MENU 1 from Menu 27\n");
+          CurrentMenu=1;
+          BackgroundRGB(255,255,255,255);
+          Start_Highlights_Menu1();
+          UpdateWindow();
+          break;
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+        case 9:
+          printf("Changing Preset Freq Button %d\n", i);
+          ChangePresetFreq(i);
+          CurrentMenu=27;
+          BackgroundRGB(0,0,0,255);
+          Start_Highlights_Menu27();
+          UpdateWindow();
+          break;
+        default:
+          printf("Menu 27 Error\n");
+        }
+        // stay in Menu 27 if freq changed
+        continue;   // Completed Menu 27 action, go and wait for touch
+      }
+      if (CurrentMenu == 28)  // Menu 28 Preset SRs
+      {
+        printf("Button Event %d, Entering Menu 28 Case Statement\n",i);
+        switch (i)
+        {
+        case 4:                               // Cancel
+          SelectInGroupOnMenu(CurrentMenu, 4, 4, 4, 1);
+          printf("Set Preset SR Cancel\n");
+          UpdateWindow();
+          usleep(500000);
+          SelectInGroupOnMenu(CurrentMenu, 4, 4, 4, 0); // Reset cancel (even if not selected)
+          printf("Returning to MENU 1 from Menu 28\n");
+          CurrentMenu=1;
+          BackgroundRGB(255,255,255,255);
+          Start_Highlights_Menu1();
+          UpdateWindow();
+          break;
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+        case 9:
+          printf("Changing Preset SR Button %d\n", i);
+          ChangePresetSR(i);
+          CurrentMenu=28;
+          BackgroundRGB(0,0,0,255);
+          Start_Highlights_Menu28();
+          UpdateWindow();
+          break;
+        default:
+          printf("Menu 28 Error\n");
+        }
+        // stay in Menu 28 if SR changed
+        continue;   // Completed Menu 28 action, go and wait for touch
+      }
+      if (CurrentMenu == 41)  // Menu 41 Keyboard
+      {
+        //break;
+      }
     }   
   }
 }
@@ -4033,7 +5382,7 @@ void Define_Menu1()
   color_t Grey;
   strcpy(MenuTitle[1], "BATC Portsdown Transmitter Main Menu"); 
 
-  Green.r=0; Green.g=128; Green.b=0;
+  Green.r=0; Green.g=96; Green.b=0;
   Blue.r=0; Blue.g=0; Blue.b=128;
   Red.r=255; Red.g=0; Red.b=0;
   Grey.r=127; Grey.g=127; Grey.b=127;
@@ -4104,16 +5453,16 @@ void Define_Menu1()
   AddButtonStatus(button, "  FEC  ^not set", &Grey);
 
   button = CreateButton(1, 13);                        // Transverter
-  AddButtonStatus(button,"Tverter^None",&Blue);
-  AddButtonStatus(button,"Tverter^None",&Green);
-  AddButtonStatus(button,"Tverter^None",&Grey);
+  AddButtonStatus(button,"Band/Tvtr^None",&Blue);
+  AddButtonStatus(button,"Band/Tvtr^None",&Green);
+  AddButtonStatus(button,"Band/Tvtr^None",&Grey);
 
   button = CreateButton(1, 14);                        // Level
   AddButtonStatus(button," Level^-",&Blue);
   AddButtonStatus(button," Level^-",&Green);
   AddButtonStatus(button," Level^-",&Grey);
 
-  // RF Mode, Vid Encoder, Output Device, Format and Source. 4th line up Menu 1
+  // Modulation, Vid Encoder, Output Device, Format and Source. 4th line up Menu 1
 
   button = CreateButton(1, 15);
   AddButtonStatus(button, "TX Mode ^not set", &Blue);
@@ -4165,11 +5514,11 @@ void Start_Highlights_Menu1()
   char Value[255];
   color_t Green;
   color_t Blue;
-  //color_t Red;
+  color_t Red;
   color_t Grey;
-  Green.r=0; Green.g=128; Green.b=0;
+  Green.r=0; Green.g=96; Green.b=0;
   Blue.r=0; Blue.g=0; Blue.b=128;
-  //Red.r=255; Red.g=0; Red.b=0;
+  Red.r=255; Red.g=0; Red.b=0;
   Grey.r=127; Grey.g=127; Grey.b=127;
 
   // Read the Config from file
@@ -4182,11 +5531,47 @@ void Start_Highlights_Menu1()
   // Call to Check Grey buttons
   GreyOut1();
 
+  // Presets Buttons 0 - 3
+  
+  char Presettext[63];
+
+  strcpy(Presettext, "Preset 1^");
+  strcat(Presettext, TabPresetLabel[0]);
+  AmendButtonStatus(0, 0, Presettext, &Blue);
+  AmendButtonStatus(0, 1, Presettext, &Green);
+  AmendButtonStatus(0, 2, Presettext, &Grey);
+
+  strcpy(Presettext, "Preset 2^");
+  strcat(Presettext, TabPresetLabel[1]);
+  AmendButtonStatus(1, 0, Presettext, &Blue);
+  AmendButtonStatus(1, 1, Presettext, &Green);
+  AmendButtonStatus(1, 2, Presettext, &Grey);
+
+  strcpy(Presettext, "Preset 3^");
+  strcat(Presettext, TabPresetLabel[2]);
+  AmendButtonStatus(2, 0, Presettext, &Blue);
+  AmendButtonStatus(2, 1, Presettext, &Green);
+  AmendButtonStatus(2, 2, Presettext, &Grey);
+
+  strcpy(Presettext, "Preset 4^");
+  strcat(Presettext, TabPresetLabel[3]);
+  AmendButtonStatus(3, 0, Presettext, &Blue);
+  AmendButtonStatus(3, 1, Presettext, &Green);
+  AmendButtonStatus(3, 2, Presettext, &Grey);
+
+  // Set Preset Button 4
+
+  strcpy(Presettext, "Store^Preset");
+  AmendButtonStatus(4, 0, Presettext, &Blue);
+  AmendButtonStatus(4, 1, Presettext, &Blue);
+  AmendButtonStatus(4, 2, Presettext, &Red);
+  AmendButtonStatus(4, 3, Presettext, &Red);
+
   // EasyCap Button 5
 
   char EasyCaptext[255];
   strcpy(Param,"analogcaminput");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   printf("Value=%s %s\n",Value," EasyCap Input");
   strcpy(EasyCaptext, "EasyCap^");
   if (strcmp(Value, "0") == 0)
@@ -4205,7 +5590,7 @@ void Start_Highlights_Menu1()
 
   char Captiontext[255];
   strcpy(Param,"caption");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   printf("Value=%s %s\n",Value," Caption State");
   strcpy(Captiontext, "Caption^");
   if (strcmp(Value, "off") == 0)
@@ -4224,7 +5609,7 @@ void Start_Highlights_Menu1()
 
   char Audiotext[255];
   strcpy(Param,"audio");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   printf("Value=%s %s\n",Value," Audio Selection");
   if (strcmp(Value, "auto") == 0)
   {
@@ -4255,7 +5640,7 @@ void Start_Highlights_Menu1()
   char Attentext[255];
   strcpy(Value, "None");
   strcpy(Param,"attenuator");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   printf("Value=%s %s\n", Value, " Attenuator Selection");
   strcpy (Attentext, "Atten^");
   strcat (Attentext, Value);
@@ -4269,12 +5654,29 @@ void Start_Highlights_Menu1()
   // Frequency Button 10
 
   char Freqtext[255];
+  float TvtrFreq;
   strcpy(Param,"freqoutput");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   printf("Value=%s %s\n",Value,"Freq");
-  strcpy(Freqtext, " Freq ^");
-  strcat(Freqtext, Value);
-  strcat(Freqtext, " MHz");
+  if ((TabBandLO[CurrentBand] < 0.1) && (TabBandLO[CurrentBand] > -0.1))
+  {
+    strcpy(Freqtext, "Freq^");
+    strcat(Freqtext, Value);
+    strcat(Freqtext, " MHz");
+  }
+  else
+  {
+    strcpy(Freqtext, "F: ");
+    strcat(Freqtext, Value);
+    strcat(Freqtext, "^T:");
+    TvtrFreq = atof(Value) + TabBandLO[CurrentBand];
+    if (TvtrFreq < 0)
+    {
+      TvtrFreq = TvtrFreq * -1;
+    }
+    snprintf(Value, 10, "%.1f", TvtrFreq);
+    strcat(Freqtext, Value);
+  }
   AmendButtonStatus(10, 0, Freqtext, &Blue);
   AmendButtonStatus(10, 1, Freqtext, &Green);
   AmendButtonStatus(10, 2, Freqtext, &Grey);
@@ -4283,7 +5685,7 @@ void Start_Highlights_Menu1()
 
   char SRtext[255];
   strcpy(Param,"symbolrate");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   printf("Value=%s %s\n",Value,"SR");
   strcpy(SRtext, "Sym Rate^ ");
   strcat(SRtext, Value);
@@ -4297,7 +5699,7 @@ void Start_Highlights_Menu1()
   char FECtext[255];
   strcpy(Param,"fec");
   strcpy(Value,"");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   printf("Value=%s %s\n",Value,"Fec");
   fec=atoi(Value);
   switch(fec)
@@ -4312,10 +5714,70 @@ void Start_Highlights_Menu1()
   AmendButtonStatus(12, 1, FECtext, &Green);
   AmendButtonStatus(12, 2, FECtext, &Grey);
 
-  // TX RF Mode Button 15
+  // Band, Button 13
+  char Bandtext[31]="Band/Tvtr^";
+  strcpy(Param,"band");
+  strcpy(Value,"");
+  GetConfigParam(PATH_PCONFIG, Param, Value);
+  printf("Value=%s %s\n",Value,"Band");
+  if (strcmp(Value, "d1") == 0)
+  {
+    strcat(Bandtext, TabBandLabel[0]);
+  }
+  if (strcmp(Value, "d2") == 0)
+  {
+    strcat(Bandtext, TabBandLabel[1]);
+  }
+  if (strcmp(Value, "d3") == 0)
+  {
+    strcat(Bandtext, TabBandLabel[2]);
+  }
+  if (strcmp(Value, "d4") == 0)
+  {
+    strcat(Bandtext, TabBandLabel[3]);
+  }
+  if (strcmp(Value, "d5") == 0)
+  {
+    strcat(Bandtext, TabBandLabel[4]);
+  }
+  if (strcmp(Value, "t1") == 0)
+  {
+    strcat(Bandtext, TabBandLabel[5]);
+  }
+  if (strcmp(Value, "t2") == 0)
+  {
+    strcat(Bandtext, TabBandLabel[6]);
+  }
+  if (strcmp(Value, "t3") == 0)
+  {
+    strcat(Bandtext, TabBandLabel[7]);
+  }
+  if (strcmp(Value, "t4") == 0)
+  {
+    strcat(Bandtext, TabBandLabel[8]);
+  }
+  AmendButtonStatus(13, 0, Bandtext, &Blue);
+  AmendButtonStatus(13, 1, Bandtext, &Green);
+  AmendButtonStatus(13, 2, Bandtext, &Grey);
+
+  // Level, Button 14
+  char Leveltext[15];
+  if (strcmp(CurrentModeOP, "DATVEXPRESS") != 0)
+  {
+    snprintf(Leveltext, 20, "Att Level^%.2f", TabBandAttenLevel[CurrentBand]);
+  }
+  else
+  {
+    snprintf(Leveltext, 20, "Exp Level^%d", TabBandExpLevel[CurrentBand]);
+  }
+  AmendButtonStatus(14, 0, Leveltext, &Blue);
+  AmendButtonStatus(14, 1, Leveltext, &Green);
+  AmendButtonStatus(14, 2, Leveltext, &Grey);
+
+  // TX Modulation Button 15
 
   char TXModetext[255];
-  strcpy(TXModetext, "RF Mode^");
+  strcpy(TXModetext, "Modulation^");
   strcat(TXModetext, CurrentTXMode);
   AmendButtonStatus(15, 0, TXModetext, &Blue);
   AmendButtonStatus(15, 1, TXModetext, &Green);
@@ -4483,14 +5945,14 @@ void Start_Highlights_Menu2()
 // Retrieves stored value for each group of buttons
 // and then sets the correct highlight
 {
-  char Param[255];
+  /* char Param[255];
   char Value[255];
 
   // Audio Input
 
   strcpy(Param,"audio");
   strcpy(Value,"");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   printf("Value=%s %s\n",Value,"Audio");
   if(strcmp(Value,"mic")==0)
   {
@@ -4503,19 +5965,19 @@ void Start_Highlights_Menu2()
   if(strcmp(Value,"video") == 0)
   {
     SelectInGroup(25 + 5, 25 + 7, 25 + 7, 1);
-  }
+  } */
 }
 
 void Define_Menu3()
 {
   int button;
-  //color_t Green;
+  color_t Green;
   color_t Blue;
 
-  //Green.r=0; Green.g=128; Green.b=0;
+  Green.r=0; Green.g=128; Green.b=0;
   Blue.r=0; Blue.g=0; Blue.b=128;
 
-  strcpy(MenuTitle[3], "Menu 3 Currently Not Required!"); 
+  strcpy(MenuTitle[3], "Menu 3 Portsdown Configuration"); 
 /*
   // Bottom Row, Menu 3
 
@@ -4580,21 +6042,22 @@ void Define_Menu3()
   // button = CreateButton(3, 14);
   // AddButtonStatus(button, "Vid Out", &Blue);
   // AddButtonStatus(button, "Vid Out", &Green);
+*/
 
-  //SOURCE - 4th line up Menu 3: Snap, View and Check, Cal
+  // 4th line up Menu 3: Band Details, Preset Freqs, Preset SRs
 
   button = CreateButton(3, 15);
-  AddButtonStatus(button, " Snap  ", &Blue);
-  AddButtonStatus(button, " Snap  ", &Green);
+  AddButtonStatus(button, "Set Band^Details", &Blue);
+  AddButtonStatus(button, "Set Band^Details", &Green);
 
   button = CreateButton(3, 16);
-  AddButtonStatus(button, " View  ", &Blue);
-  AddButtonStatus(button, " View  ", &Green);
+  AddButtonStatus(button, "Set Preset^Freqs", &Blue);
+  AddButtonStatus(button, "Set Preset^Freqs", &Green);
 
   button = CreateButton(3, 17);
-  AddButtonStatus(button, " Check ", &Blue);
-  AddButtonStatus(button, " Check ", &Green);
-
+  AddButtonStatus(button, "Set Preset^SRs", &Blue);
+  AddButtonStatus(button, "Set Preset^SRs", &Green);
+/*
   button = CreateButton(3, 18);
   AddButtonStatus(button, "Calibrate^  Touch  ", &Blue);
   //AddButtonStatus(button, "Card MPEG2", &Green);
@@ -4642,7 +6105,7 @@ void Define_Menu11()
   Blue.r=0; Blue.g=0; Blue.b=128;
   LBlue.r=64; LBlue.g=64; LBlue.b=192;
 
-  strcpy(MenuTitle[11], "RF Output Mode Selection Menu (11)"); 
+  strcpy(MenuTitle[11], "Modulation Selection Menu (11)"); 
 
   // Bottom Row, Menu 11
 
@@ -4981,10 +6444,48 @@ void Define_Menu16()
   Green.r=0; Green.g=128; Green.b=0;
   Blue.r=0; Blue.g=0; Blue.b=128;
   LBlue.r=64; LBlue.g=64; LBlue.b=192;
+  float TvtrFreq;
+  char Freqtext[31];
+  char Value[31];
 
   strcpy(MenuTitle[16], "Frequency Selection Menu (16)"); 
 
   // Bottom Row, Menu 16
+
+
+  if ((TabBandLO[5] < 0.1) && (TabBandLO[5] > -0.1))
+  {
+    strcpy(Freqtext, FreqLabel[5]);
+  }
+  else
+  {
+    strcpy(Freqtext, "F: ");
+    strcat(Freqtext, TabFreq[5]);
+    strcat(Freqtext, "^T:");
+    TvtrFreq = atof(TabFreq[5]) + TabBandLO[CurrentBand];
+    if (TvtrFreq < 0)
+    {
+      TvtrFreq = TvtrFreq * -1;
+    }
+    snprintf(Value, 10, "%.1f", TvtrFreq);
+    strcat(Freqtext, Value);
+  }
+ 
+  button = CreateButton(16, 0);
+  AddButtonStatus(button, "test", &Blue);
+  AddButtonStatus(button, Freqtext, &Green);
+
+  button = CreateButton(16, 1);
+  AddButtonStatus(button, FreqLabel[6], &Blue);
+  AddButtonStatus(button, FreqLabel[6], &Green);
+
+  button = CreateButton(16, 2);
+  AddButtonStatus(button, FreqLabel[7], &Blue);
+  AddButtonStatus(button, FreqLabel[7], &Green);
+
+  button = CreateButton(16, 3);
+  AddButtonStatus(button, FreqLabel[8], &Blue);
+  AddButtonStatus(button, FreqLabel[8], &Green);
 
   button = CreateButton(16, 4);
   AddButtonStatus(button, "Cancel", &Blue);
@@ -5013,43 +6514,76 @@ void Define_Menu16()
   AddButtonStatus(button, FreqLabel[4], &Green);
 }
 
+void MakeFreqText(index)
+{
+  char Param[255];
+  char Value[255];
+  float TvtrFreq;
+
+  strcpy(Param,"freqoutput");
+  GetConfigParam(PATH_PCONFIG,Param,Value);
+  if ((TabBandLO[CurrentBand] < 0.1) && (TabBandLO[CurrentBand] > -0.1))
+  {
+    strcpy(FreqBtext, FreqLabel[index]);
+  }
+  else
+  {
+    strcpy(FreqBtext, "F: ");
+    strcat(FreqBtext, TabFreq[index]);
+    strcat(FreqBtext, "^T:");
+    TvtrFreq = atof(TabFreq[index]) + TabBandLO[CurrentBand];
+    if (TvtrFreq < 0)
+    {
+      TvtrFreq = TvtrFreq * -1;
+    }
+    snprintf(Value, 10, "%.1f", TvtrFreq);
+    strcat(FreqBtext, Value);
+  }
+}
+
 void Start_Highlights_Menu16()
 {
   // Frequency
   char Param[255];
   char Value[255];
-  //int SR;
+  int index;
+  int NoButton;
+  color_t Green;
+  color_t Blue;
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
 
+  // Update info in memory
+  ReadPresets();
+
+  // Look up current frequency for highlighting
   strcpy(Param,"freqoutput");
-  GetConfigParam(PATH_CONFIG,Param,Value);
-  //strcpy(freqtxt,Value);
-  printf("Value=%s %s\n",Value,"Freq");
-  if(strcmp(Value,TabFreq[0])==0)
+  GetConfigParam(PATH_PCONFIG,Param,Value);
+
+  for(index = 0; index < 9 ; index = index + 1)
   {
-    SelectInGroupOnMenu(16, 5, 9, 5, 1);
-  }
-  if(strcmp(Value,TabFreq[1])==0)
-  {
-    SelectInGroupOnMenu(16, 5, 9, 6, 1);
-  }
-  if(strcmp(Value,TabFreq[2])==0)
-  {
-    SelectInGroupOnMenu(16, 5, 9, 7, 1);
-  }
-  if(strcmp(Value,TabFreq[3])==0)
-  {
-    SelectInGroupOnMenu(16, 5, 9, 8, 1);
-  }
-  if(strcmp(Value,TabFreq[4])==0)
-  {
-    SelectInGroupOnMenu(16, 5, 9, 9, 1);
+    // Define the button text
+    MakeFreqText(index);
+    NoButton = index + 5; // Valid for bottom row
+    if (index > 4)          // Overwrite for top row
+    {
+      NoButton = index - 5;
+    }
+    AmendButtonStatus(ButtonNumber(16, NoButton), 0, FreqBtext, &Blue);
+    AmendButtonStatus(ButtonNumber(16, NoButton), 1, FreqBtext, &Green);
+
+    //Highlight the Current Button
+    if(strcmp(Value, TabFreq[index]) == 0)
+    {
+      SelectInGroupOnMenu(16, 5, 9, NoButton, 1);
+      SelectInGroupOnMenu(16, 0, 3, NoButton, 1);
+    }
   }
 }
 
 void Define_Menu17()
 {
   int button;
-  char SRtext[255];
   color_t Green;
   color_t Blue;
   color_t LBlue;
@@ -5061,6 +6595,22 @@ void Define_Menu17()
 
   // Bottom Row, Menu 17
 
+  button = CreateButton(17, 0);
+  AddButtonStatus(button, SRLabel[5], &Blue);
+  AddButtonStatus(button, SRLabel[5], &Green);
+
+  button = CreateButton(17, 1);
+  AddButtonStatus(button, SRLabel[6], &Blue);
+  AddButtonStatus(button, SRLabel[6], &Green);
+
+  button = CreateButton(17, 2);
+  AddButtonStatus(button, SRLabel[7], &Blue);
+  AddButtonStatus(button, SRLabel[7], &Green);
+
+  button = CreateButton(17, 3);
+  AddButtonStatus(button, SRLabel[8], &Blue);
+  AddButtonStatus(button, SRLabel[8], &Green);
+
   button = CreateButton(17, 4);
   AddButtonStatus(button, "Cancel", &Blue);
   AddButtonStatus(button, "Cancel", &LBlue);
@@ -5068,29 +6618,24 @@ void Define_Menu17()
   // 2nd Row, Menu 17
 
   button = CreateButton(17, 5);
-  snprintf(SRtext, 10, "SR%d", TabSR[0]);
-  AddButtonStatus(button, SRtext, &Blue);
-  AddButtonStatus(button, SRtext, &Green);
+  AddButtonStatus(button, SRLabel[0], &Blue);
+  AddButtonStatus(button, SRLabel[0], &Green);
 
   button = CreateButton(17, 6);
-  snprintf(SRtext, 10, "SR%d", TabSR[1]);
-  AddButtonStatus(button, SRtext, &Blue);
-  AddButtonStatus(button, SRtext, &Green);
+  AddButtonStatus(button, SRLabel[1], &Blue);
+  AddButtonStatus(button, SRLabel[1], &Green);
 
   button = CreateButton(17, 7);
-  snprintf(SRtext, 10, "SR%d", TabSR[2]);
-  AddButtonStatus(button, SRtext, &Blue);
-  AddButtonStatus(button, SRtext, &Green);
+  AddButtonStatus(button, SRLabel[2], &Blue);
+  AddButtonStatus(button, SRLabel[2], &Green);
 
   button = CreateButton(17, 8);
-  snprintf(SRtext, 10, "SR%d", TabSR[3]);
-  AddButtonStatus(button, SRtext, &Blue);
-  AddButtonStatus(button, SRtext, &Green);
+  AddButtonStatus(button, SRLabel[3], &Blue);
+  AddButtonStatus(button, SRLabel[3], &Green);
 
   button = CreateButton(17, 9);
-  snprintf(SRtext, 10, "SR%d", TabSR[4]);
-  AddButtonStatus(button, SRtext, &Blue);
-  AddButtonStatus(button, SRtext, &Green);
+  AddButtonStatus(button, SRLabel[4], &Blue);
+  AddButtonStatus(button, SRLabel[4], &Green);
 }
 
 void Start_Highlights_Menu17()
@@ -5101,29 +6646,54 @@ void Start_Highlights_Menu17()
   int SR;
 
   strcpy(Param,"symbolrate");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   SR=atoi(Value);
   printf("Value=%s %s\n",Value,"SR");
 
   if ( SR == TabSR[0] )
   {
+    SelectInGroupOnMenu(17, 0, 3, 5, 1);
     SelectInGroupOnMenu(17, 5, 9, 5, 1);
   }
   else if ( SR == TabSR[1] )
   {
+    SelectInGroupOnMenu(17, 0, 3, 6, 1);
     SelectInGroupOnMenu(17, 5, 9, 6, 1);
   }
   else if ( SR == TabSR[2] )
   {
+    SelectInGroupOnMenu(17, 0, 3, 7, 1);
     SelectInGroupOnMenu(17, 5, 9, 7, 1);
   }
   else if ( SR == TabSR[3] )
   {
+    SelectInGroupOnMenu(17, 0, 3, 8, 1);
     SelectInGroupOnMenu(17, 5, 9, 8, 1);
   }
   else if ( SR == TabSR[4] )
   {
+    SelectInGroupOnMenu(17, 0, 3, 9, 1);
     SelectInGroupOnMenu(17, 5, 9, 9, 1);
+  }
+  else if ( SR == TabSR[5] )
+  {
+    SelectInGroupOnMenu(17, 0, 3, 0, 1);
+    SelectInGroupOnMenu(17, 5, 9, 0, 1);
+  }
+  else if ( SR == TabSR[6] )
+  {
+    SelectInGroupOnMenu(17, 0, 3, 1, 1);
+    SelectInGroupOnMenu(17, 5, 9, 1, 1);
+  }
+  else if ( SR == TabSR[7] )
+  {
+    SelectInGroupOnMenu(17, 0, 3, 2, 1);
+    SelectInGroupOnMenu(17, 5, 9, 2, 1);
+  }
+  else if ( SR == TabSR[8] )
+  {
+    SelectInGroupOnMenu(17, 0, 3, 3, 1);
+    SelectInGroupOnMenu(17, 5, 9, 3, 1);
   }
 }
 
@@ -5177,7 +6747,7 @@ void Start_Highlights_Menu18()
 
   strcpy(Param,"fec");
   strcpy(Value,"");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   printf("Value=%s %s\n",Value,"Fec");
   fec=atoi(Value);
   switch(fec)
@@ -5197,7 +6767,101 @@ void Start_Highlights_Menu18()
   }
 }
 
-// Menu 19 Tverter
+void Define_Menu19()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+  color_t LBlue;
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+  LBlue.r=64; LBlue.g=64; LBlue.b=192;
+
+  strcpy(MenuTitle[19], "Transverter Selection Menu (19)"); 
+
+  // Bottom Row, Menu 19
+
+  button = CreateButton(19, 0);
+  AddButtonStatus(button, TabBandLabel[5], &Blue);
+  AddButtonStatus(button, TabBandLabel[5], &Green);
+
+  button = CreateButton(19, 1);
+  AddButtonStatus(button, TabBandLabel[6], &Blue);
+  AddButtonStatus(button, TabBandLabel[6], &Green);
+
+  button = CreateButton(19, 2);
+  AddButtonStatus(button, TabBandLabel[7], &Blue);
+  AddButtonStatus(button, TabBandLabel[7], &Green);
+
+  button = CreateButton(19, 3);
+  AddButtonStatus(button, TabBandLabel[8], &Blue);
+  AddButtonStatus(button, TabBandLabel[8], &Green);
+
+  button = CreateButton(19, 4);
+  AddButtonStatus(button, "Cancel", &Blue);
+  AddButtonStatus(button, "Cancel", &LBlue);
+
+  // 2nd Row, Menu 19
+
+  button = CreateButton(19, 5);
+  AddButtonStatus(button,"Direct",&Blue);
+  AddButtonStatus(button,"Direct",&Green);
+}
+
+void Start_Highlights_Menu19()
+{
+  // Band/Transverter Select
+  char Param[255];
+  char Value[255];
+  int NoButton;
+  char BandLabel[31];
+  color_t Green;
+  color_t Blue;
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  strcpy(Param,"band");
+  strcpy(Value,"");
+  GetConfigParam(PATH_PCONFIG,Param,Value);
+  printf("Value=%s %s\n",Value,"Band");
+
+  //Set default of Direct and then test for transverters
+  // and overwrite if required
+  SelectInGroupOnMenu(19, 5, 5, 5, 1);
+  SelectInGroupOnMenu(19, 0, 3, 5, 1);
+
+  if (strcmp(Value, "t1") == 0)
+  {
+    SelectInGroupOnMenu(19, 5, 5, 0, 1);
+    SelectInGroupOnMenu(19, 0, 3, 0, 1);
+  }
+  if (strcmp(Value, "t2") == 0)
+  {
+    SelectInGroupOnMenu(19, 5, 5, 1, 1);
+    SelectInGroupOnMenu(19, 0, 3, 1, 1);
+  }
+  if (strcmp(Value, "t3") == 0)
+  {
+    SelectInGroupOnMenu(19, 5, 5, 2, 1);
+    SelectInGroupOnMenu(19, 0, 3, 2, 1);
+  }
+  if (strcmp(Value, "t4") == 0)
+  {
+    SelectInGroupOnMenu(19, 5, 5, 3, 1);
+    SelectInGroupOnMenu(19, 0, 3, 3, 1);
+  }
+
+  // Set transverter Labels
+
+  for (NoButton = 0; NoButton < 4; NoButton = NoButton + 1)
+  {
+    strcpy(BandLabel, "Transvtr^");
+    strcat(BandLabel, TabBandLabel[NoButton + 5]);
+    AmendButtonStatus(ButtonNumber(19, NoButton), 0, BandLabel, &Blue);
+    AmendButtonStatus(ButtonNumber(19, NoButton), 1, BandLabel, &Green);
+  }
+
+}
 
 // Menu 20 Level
 
@@ -5433,6 +7097,503 @@ void Start_Highlights_Menu24()
   }
 }
 
+void Define_Menu26()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+  color_t LBlue;
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+  LBlue.r=64; LBlue.g=64; LBlue.b=192;
+  char BandLabel[31];
+
+  strcpy(MenuTitle[26], "Band Details Setting Menu (26)"); 
+
+  // Bottom Row, Menu 26
+
+  button = CreateButton(26, 0);
+  strcpy(BandLabel, "Transvtr^");
+  strcat(BandLabel, TabBandLabel[5]);
+  AddButtonStatus(button, BandLabel, &Blue);
+  AddButtonStatus(button, BandLabel, &Green);
+
+  button = CreateButton(26, 1);
+  strcpy(BandLabel, "Transvtr^");
+  strcat(BandLabel, TabBandLabel[6]);
+  AddButtonStatus(button, BandLabel, &Blue);
+  AddButtonStatus(button, BandLabel, &Green);
+
+  button = CreateButton(26, 2);
+  strcpy(BandLabel, "Transvtr^");
+  strcat(BandLabel, TabBandLabel[7]);
+  AddButtonStatus(button, BandLabel, &Blue);
+  AddButtonStatus(button, BandLabel, &Green);
+
+  button = CreateButton(26, 3);
+  strcpy(BandLabel, "Transvtr^");
+  strcat(BandLabel, TabBandLabel[8]);
+  AddButtonStatus(button, BandLabel, &Blue);
+  AddButtonStatus(button, BandLabel, &Green);
+
+  button = CreateButton(26, 4);
+  AddButtonStatus(button, "Exit", &Blue);
+  AddButtonStatus(button, "Exit", &LBlue);
+
+  // 2nd Row, Menu 26
+
+  button = CreateButton(26, 5);
+  AddButtonStatus(button, TabBandLabel[0], &Blue);
+  AddButtonStatus(button, TabBandLabel[0], &Green);
+
+  button = CreateButton(26, 6);
+  AddButtonStatus(button, TabBandLabel[1], &Blue);
+  AddButtonStatus(button, TabBandLabel[1], &Green);
+
+  button = CreateButton(26, 7);
+  AddButtonStatus(button, TabBandLabel[2], &Blue);
+  AddButtonStatus(button, TabBandLabel[2], &Green);
+
+  button = CreateButton(26, 8);
+  AddButtonStatus(button, TabBandLabel[3], &Blue);
+  AddButtonStatus(button, TabBandLabel[3], &Green);
+
+  button = CreateButton(26, 9);
+  AddButtonStatus(button, TabBandLabel[4], &Blue);
+  AddButtonStatus(button, TabBandLabel[4], &Green);
+}
+
+void Start_Highlights_Menu26()
+{
+  // Set Band Select Labels
+  int NoButton;
+  char BandLabel[31];
+  color_t Green;
+  color_t Blue;
+  //color_t LBlue;
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+  //LBlue.r=64; LBlue.g=64; LBlue.b=192;
+
+  printf("Entering Start Highlights Menu26\n");
+
+  for (NoButton = 0; NoButton < 4; NoButton = NoButton + 1)
+  {
+    strcpy(BandLabel, "Transvtr^");
+    strcat(BandLabel, TabBandLabel[NoButton + 5]);
+    AmendButtonStatus(ButtonNumber(26, NoButton), 0, BandLabel, &Blue);
+    AmendButtonStatus(ButtonNumber(26, NoButton), 1, BandLabel, &Green);
+  }
+  for (NoButton = 5; NoButton < 10; NoButton = NoButton + 1)
+  {
+    AmendButtonStatus(ButtonNumber(26, NoButton), 0, TabBandLabel[NoButton - 5], &Blue);
+    AmendButtonStatus(ButtonNumber(26, NoButton), 1, TabBandLabel[NoButton - 5], &Green);
+  }
+}
+
+void Define_Menu27()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+  color_t LBlue;
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+  LBlue.r=64; LBlue.g=64; LBlue.b=192;
+
+  strcpy(MenuTitle[27], "Frequency Preset Setting Menu (27)"); 
+
+  // Bottom Row, Menu 27
+
+  button = CreateButton(27, 0);
+  AddButtonStatus(button, FreqLabel[5], &Blue);
+  AddButtonStatus(button, FreqLabel[5], &Green);
+
+  button = CreateButton(27, 1);
+  AddButtonStatus(button, FreqLabel[6], &Blue);
+  AddButtonStatus(button, FreqLabel[6], &Green);
+
+  button = CreateButton(27, 2);
+  AddButtonStatus(button, FreqLabel[7], &Blue);
+  AddButtonStatus(button, FreqLabel[7], &Green);
+
+  button = CreateButton(27, 3);
+  AddButtonStatus(button, FreqLabel[8], &Blue);
+  AddButtonStatus(button, FreqLabel[8], &Green);
+
+  button = CreateButton(27, 4);
+  AddButtonStatus(button, "Exit", &Blue);
+  AddButtonStatus(button, "Exit", &LBlue);
+
+  // 2nd Row, Menu 27
+
+  button = CreateButton(27, 5);
+  AddButtonStatus(button, FreqLabel[0], &Blue);
+  AddButtonStatus(button, FreqLabel[0], &Green);
+
+  button = CreateButton(27, 6);
+  AddButtonStatus(button, FreqLabel[1], &Blue);
+  AddButtonStatus(button, FreqLabel[1], &Green);
+
+  button = CreateButton(27, 7);
+  AddButtonStatus(button, FreqLabel[2], &Blue);
+  AddButtonStatus(button, FreqLabel[2], &Green);
+
+  button = CreateButton(27, 8);
+  AddButtonStatus(button, FreqLabel[3], &Blue);
+  AddButtonStatus(button, FreqLabel[3], &Green);
+
+  button = CreateButton(27, 9);
+  AddButtonStatus(button, FreqLabel[4], &Blue);
+  AddButtonStatus(button, FreqLabel[4], &Green);
+}
+
+void Start_Highlights_Menu27()
+{
+  // Preset Frequency Change 
+  int index;
+  int NoButton;
+  color_t Green;
+  color_t Blue;
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+
+  for(index = 0; index < 9 ; index = index + 1)
+  {
+    // Define the button text
+    MakeFreqText(index);
+    NoButton = index + 5; // Valid for bottom row
+    if (index > 4)          // Overwrite for top row
+    {
+      NoButton = index - 5;
+    }
+    AmendButtonStatus(ButtonNumber(27, NoButton), 0, FreqBtext, &Blue);
+    AmendButtonStatus(ButtonNumber(27, NoButton), 1, FreqBtext, &Green);
+  }
+}
+
+void Define_Menu28()
+{
+  int button;
+  color_t Green;
+  color_t Blue;
+  color_t LBlue;
+  Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+  LBlue.r=64; LBlue.g=64; LBlue.b=192;
+
+  strcpy(MenuTitle[28], "Symbol Rate Preset Setting Menu (28)"); 
+
+  // Bottom Row, Menu 28
+
+  button = CreateButton(28, 0);
+  AddButtonStatus(button, SRLabel[5], &Blue);
+  AddButtonStatus(button, SRLabel[5], &Green);
+
+  button = CreateButton(28, 1);
+  AddButtonStatus(button, SRLabel[6], &Blue);
+  AddButtonStatus(button, SRLabel[6], &Green);
+
+  button = CreateButton(28, 2);
+  AddButtonStatus(button, SRLabel[7], &Blue);
+  AddButtonStatus(button, SRLabel[7], &Green);
+
+  button = CreateButton(28, 3);
+  AddButtonStatus(button, SRLabel[8], &Blue);
+  AddButtonStatus(button, SRLabel[8], &Green);
+
+  button = CreateButton(28, 4);
+  AddButtonStatus(button, "Exit", &Blue);
+  AddButtonStatus(button, "Exit", &LBlue);
+
+  // 2nd Row, Menu 16
+
+  button = CreateButton(28, 5);
+  AddButtonStatus(button, SRLabel[0], &Blue);
+  AddButtonStatus(button, SRLabel[0], &Green);
+
+  button = CreateButton(28, 6);
+  AddButtonStatus(button, SRLabel[1], &Blue);
+  AddButtonStatus(button, SRLabel[1], &Green);
+
+  button = CreateButton(28, 7);
+  AddButtonStatus(button, SRLabel[2], &Blue);
+  AddButtonStatus(button, SRLabel[2], &Green);
+
+  button = CreateButton(28, 8);
+  AddButtonStatus(button, SRLabel[3], &Blue);
+  AddButtonStatus(button, SRLabel[3], &Green);
+
+  button = CreateButton(28, 9);
+  AddButtonStatus(button, SRLabel[4], &Blue);
+  AddButtonStatus(button, SRLabel[4], &Green);
+}
+
+void Start_Highlights_Menu28()
+{
+  // SR
+}
+
+void Define_Menu41()
+{
+  int button;
+  //color_t Green;
+  color_t Blue;
+  color_t LBlue;
+  //Green.r=0; Green.g=128; Green.b=0;
+  Blue.r=0; Blue.g=0; Blue.b=128;
+  LBlue.r=64; LBlue.g=64; LBlue.b=192;
+
+  strcpy(MenuTitle[41], ""); 
+
+  button = CreateButton(41, 0);
+  AddButtonStatus(button, "SPACE", &Blue);
+  AddButtonStatus(button, "SPACE", &LBlue);
+  AddButtonStatus(button, "SPACE", &Blue);
+  AddButtonStatus(button, "SPACE", &LBlue);
+  //button = CreateButton(41, 1);
+  //AddButtonStatus(button, "X", &Blue);
+  //AddButtonStatus(button, "X", &LBlue);
+  button = CreateButton(41, 2);
+  AddButtonStatus(button, "<", &Blue);
+  AddButtonStatus(button, "<", &LBlue);
+  AddButtonStatus(button, "<", &Blue);
+  AddButtonStatus(button, "<", &LBlue);
+  button = CreateButton(41, 3);
+  AddButtonStatus(button, ">", &Blue);
+  AddButtonStatus(button, ">", &LBlue);
+  AddButtonStatus(button, ">", &Blue);
+  AddButtonStatus(button, ">", &LBlue);
+  button = CreateButton(41, 4);
+  AddButtonStatus(button, "-", &Blue);
+  AddButtonStatus(button, "-", &LBlue);
+  AddButtonStatus(button, "_", &Blue);
+  AddButtonStatus(button, "_", &LBlue);
+  //button = CreateButton(41, 5);
+  //AddButtonStatus(button, "N", &Blue);
+  //AddButtonStatus(button, "N", &LBlue);
+  button = CreateButton(41, 6);
+  AddButtonStatus(button, "^", &LBlue);
+  AddButtonStatus(button, "^", &Blue);
+  AddButtonStatus(button, "^", &Blue);
+  AddButtonStatus(button, "^", &LBlue);
+  button = CreateButton(41, 7);
+  AddButtonStatus(button, "^", &LBlue);
+  AddButtonStatus(button, "^", &Blue);
+  AddButtonStatus(button, "^", &Blue);
+  AddButtonStatus(button, "^", &LBlue);
+  button = CreateButton(41, 8);
+  AddButtonStatus(button, "Enter", &Blue);
+  AddButtonStatus(button, "Enter", &LBlue);
+  AddButtonStatus(button, "Enter", &Blue);
+  AddButtonStatus(button, "Enter", &LBlue);
+  button = CreateButton(41, 9);
+  AddButtonStatus(button, "<=", &Blue);
+  AddButtonStatus(button, "<=", &LBlue);
+  AddButtonStatus(button, "<=", &Blue);
+  AddButtonStatus(button, "<=", &LBlue);
+  button = CreateButton(41, 10);
+  AddButtonStatus(button, "Z", &Blue);
+  AddButtonStatus(button, "Z", &LBlue);
+  AddButtonStatus(button, "z", &Blue);
+  AddButtonStatus(button, "z", &LBlue);
+  button = CreateButton(41, 11);
+  AddButtonStatus(button, "X", &Blue);
+  AddButtonStatus(button, "X", &LBlue);
+  AddButtonStatus(button, "x", &Blue);
+  AddButtonStatus(button, "x", &LBlue);
+  button = CreateButton(41, 12);
+  AddButtonStatus(button, "C", &Blue);
+  AddButtonStatus(button, "C", &LBlue);
+  AddButtonStatus(button, "c", &Blue);
+  AddButtonStatus(button, "c", &LBlue);
+  button = CreateButton(41, 13);
+  AddButtonStatus(button, "V", &Blue);
+  AddButtonStatus(button, "V", &LBlue);
+  AddButtonStatus(button, "v", &Blue);
+  AddButtonStatus(button, "v", &LBlue);
+  button = CreateButton(41, 14);
+  AddButtonStatus(button, "B", &Blue);
+  AddButtonStatus(button, "B", &LBlue);
+  AddButtonStatus(button, "b", &Blue);
+  AddButtonStatus(button, "b", &LBlue);
+  button = CreateButton(41, 15);
+  AddButtonStatus(button, "N", &Blue);
+  AddButtonStatus(button, "N", &LBlue);
+  AddButtonStatus(button, "n", &Blue);
+  AddButtonStatus(button, "n", &LBlue);
+  button = CreateButton(41, 16);
+  AddButtonStatus(button, "M", &Blue);
+  AddButtonStatus(button, "M", &LBlue);
+  AddButtonStatus(button, "m", &Blue);
+  AddButtonStatus(button, "m", &LBlue);
+  button = CreateButton(41, 17);
+  AddButtonStatus(button, ",", &Blue);
+  AddButtonStatus(button, ",", &LBlue);
+  AddButtonStatus(button, "!", &Blue);
+  AddButtonStatus(button, "!", &LBlue);
+  button = CreateButton(41, 18);
+  AddButtonStatus(button, ".", &Blue);
+  AddButtonStatus(button, ".", &LBlue);
+  AddButtonStatus(button, ".", &Blue);
+  AddButtonStatus(button, ".", &LBlue);
+  button = CreateButton(41, 19);
+  AddButtonStatus(button, "/", &Blue);
+  AddButtonStatus(button, "/", &LBlue);
+  AddButtonStatus(button, "?", &Blue);
+  AddButtonStatus(button, "?", &LBlue);
+  button = CreateButton(41, 20);
+  AddButtonStatus(button, "A", &Blue);
+  AddButtonStatus(button, "A", &LBlue);
+  AddButtonStatus(button, "a", &Blue);
+  AddButtonStatus(button, "a", &LBlue);
+  button = CreateButton(41, 21);
+  AddButtonStatus(button, "S", &Blue);
+  AddButtonStatus(button, "S", &LBlue);
+  AddButtonStatus(button, "s", &Blue);
+  AddButtonStatus(button, "s", &LBlue);
+  button = CreateButton(41, 22);
+  AddButtonStatus(button, "D", &Blue);
+  AddButtonStatus(button, "D", &LBlue);
+  AddButtonStatus(button, "d", &Blue);
+  AddButtonStatus(button, "d", &LBlue);
+  button = CreateButton(41, 23);
+  AddButtonStatus(button, "F", &Blue);
+  AddButtonStatus(button, "F", &LBlue);
+  AddButtonStatus(button, "f", &Blue);
+  AddButtonStatus(button, "f", &LBlue);
+  button = CreateButton(41, 24);
+  AddButtonStatus(button, "G", &Blue);
+  AddButtonStatus(button, "G", &LBlue);
+  AddButtonStatus(button, "g", &Blue);
+  AddButtonStatus(button, "g", &LBlue);
+  button = CreateButton(41, 25);
+  AddButtonStatus(button, "H", &Blue);
+  AddButtonStatus(button, "H", &LBlue);
+  AddButtonStatus(button, "h", &Blue);
+  AddButtonStatus(button, "h", &LBlue);
+  button = CreateButton(41, 26);
+  AddButtonStatus(button, "J", &Blue);
+  AddButtonStatus(button, "J", &LBlue);
+  AddButtonStatus(button, "j", &Blue);
+  AddButtonStatus(button, "j", &LBlue);
+  button = CreateButton(41, 27);
+  AddButtonStatus(button, "K", &Blue);
+  AddButtonStatus(button, "K", &LBlue);
+  AddButtonStatus(button, "k", &Blue);
+  AddButtonStatus(button, "k", &LBlue);
+  button = CreateButton(41, 28);
+  AddButtonStatus(button, "L", &Blue);
+  AddButtonStatus(button, "L", &LBlue);
+  AddButtonStatus(button, "l", &Blue);
+  AddButtonStatus(button, "l", &LBlue);
+  //button = CreateButton(41, 29);
+  //AddButtonStatus(button, "/", &Blue);
+  //AddButtonStatus(button, "/", &LBlue);
+  button = CreateButton(41, 30);
+  AddButtonStatus(button, "Q", &Blue);
+  AddButtonStatus(button, "Q", &LBlue);
+  AddButtonStatus(button, "q", &Blue);
+  AddButtonStatus(button, "q", &LBlue);
+  button = CreateButton(41, 31);
+  AddButtonStatus(button, "W", &Blue);
+  AddButtonStatus(button, "W", &LBlue);
+  AddButtonStatus(button, "w", &Blue);
+  AddButtonStatus(button, "w", &LBlue);
+  button = CreateButton(41, 32);
+  AddButtonStatus(button, "E", &Blue);
+  AddButtonStatus(button, "E", &LBlue);
+  AddButtonStatus(button, "e", &Blue);
+  AddButtonStatus(button, "e", &LBlue);
+  button = CreateButton(41, 33);
+  AddButtonStatus(button, "R", &Blue);
+  AddButtonStatus(button, "R", &LBlue);
+  AddButtonStatus(button, "r", &Blue);
+  AddButtonStatus(button, "r", &LBlue);
+  button = CreateButton(41, 34);
+  AddButtonStatus(button, "T", &Blue);
+  AddButtonStatus(button, "T", &LBlue);
+  AddButtonStatus(button, "t", &Blue);
+  AddButtonStatus(button, "t", &LBlue);
+  button = CreateButton(41, 35);
+  AddButtonStatus(button, "Y", &Blue);
+  AddButtonStatus(button, "Y", &LBlue);
+  AddButtonStatus(button, "y", &Blue);
+  AddButtonStatus(button, "y", &LBlue);
+  button = CreateButton(41, 36);
+  AddButtonStatus(button, "U", &Blue);
+  AddButtonStatus(button, "U", &LBlue);
+  AddButtonStatus(button, "u", &Blue);
+  AddButtonStatus(button, "u", &LBlue);
+  button = CreateButton(41, 37);
+  AddButtonStatus(button, "I", &Blue);
+  AddButtonStatus(button, "I", &LBlue);
+  AddButtonStatus(button, "i", &Blue);
+  AddButtonStatus(button, "i", &LBlue);
+  button = CreateButton(41, 38);
+  AddButtonStatus(button, "O", &Blue);
+  AddButtonStatus(button, "O", &LBlue);
+  AddButtonStatus(button, "o", &Blue);
+  AddButtonStatus(button, "o", &LBlue);
+  button = CreateButton(41, 39);
+  AddButtonStatus(button, "P", &Blue);
+  AddButtonStatus(button, "P", &LBlue);
+  AddButtonStatus(button, "p", &Blue);
+  AddButtonStatus(button, "p", &LBlue);
+
+  button = CreateButton(41, 40);
+  AddButtonStatus(button, "1", &Blue);
+  AddButtonStatus(button, "1", &LBlue);
+  AddButtonStatus(button, "1", &Blue);
+  AddButtonStatus(button, "1", &LBlue);
+  button = CreateButton(41, 41);
+  AddButtonStatus(button, "2", &Blue);
+  AddButtonStatus(button, "2", &LBlue);
+  AddButtonStatus(button, "2", &Blue);
+  AddButtonStatus(button, "2", &LBlue);
+  button = CreateButton(41, 42);
+  AddButtonStatus(button, "3", &Blue);
+  AddButtonStatus(button, "3", &LBlue);
+  AddButtonStatus(button, "3", &Blue);
+  AddButtonStatus(button, "3", &LBlue);
+  button = CreateButton(41, 43);
+  AddButtonStatus(button, "4", &Blue);
+  AddButtonStatus(button, "4", &LBlue);
+  AddButtonStatus(button, "4", &Blue);
+  AddButtonStatus(button, "4", &LBlue);
+  button = CreateButton(41, 44);
+  AddButtonStatus(button, "5", &Blue);
+  AddButtonStatus(button, "5", &LBlue);
+  AddButtonStatus(button, "5", &Blue);
+  AddButtonStatus(button, "5", &LBlue);
+  button = CreateButton(41, 45);
+  AddButtonStatus(button, "6", &Blue);
+  AddButtonStatus(button, "6", &LBlue);
+  AddButtonStatus(button, "6", &Blue);
+  AddButtonStatus(button, "6", &LBlue);
+  button = CreateButton(41, 46);
+  AddButtonStatus(button, "7", &Blue);
+  AddButtonStatus(button, "7", &LBlue);
+  AddButtonStatus(button, "7", &Blue);
+  AddButtonStatus(button, "7", &LBlue);
+  button = CreateButton(41, 47);
+  AddButtonStatus(button, "8", &Blue);
+  AddButtonStatus(button, "8", &LBlue);
+  AddButtonStatus(button, "8", &Blue);
+  AddButtonStatus(button, "8", &LBlue);
+  button = CreateButton(41, 48);
+  AddButtonStatus(button, "9", &Blue);
+  AddButtonStatus(button, "9", &LBlue);
+  AddButtonStatus(button, "9", &Blue);
+  AddButtonStatus(button, "9", &LBlue);
+  button = CreateButton(41, 49);
+  AddButtonStatus(button, "0", &Blue);
+  AddButtonStatus(button, "0", &LBlue);
+  AddButtonStatus(button, "0", &Blue);
+  AddButtonStatus(button, "0", &LBlue);
+}
+
+
 static void
 terminate(int dummy)
 {
@@ -5490,7 +7651,7 @@ int main(int argc, char **argv)
   if(argc>1)
     Inversed=atoi(argv[1]);
   strcpy(Param,"display");
-  GetConfigParam(PATH_CONFIG,Param,Value);
+  GetConfigParam(PATH_PCONFIG,Param,Value);
   if(strcmp(Value,"Waveshare")==0)
     Inversed=1;
   if(strcmp(Value,"WaveshareB")==0)
@@ -5508,7 +7669,7 @@ int main(int argc, char **argv)
   if (strlen(USBVidDevice) == 12)  // /dev/video* with a new line
   {
     strcpy(Param,"analogcamstandard");
-    GetConfigParam(PATH_CONFIG,Param,Value);
+    GetConfigParam(PATH_PCONFIG,Param,Value);
     USBVidDevice[strcspn(USBVidDevice, "\n")] = 0;  //remove the newline
     strcpy(SetStandard, "v4l2-ctl -d ");
     strcat(SetStandard, USBVidDevice);
@@ -5570,6 +7731,8 @@ int main(int argc, char **argv)
   ReadCaptionState();
   ReadAudioState();
   ReadAttenState();
+  ReadBand();
+  ReadBandDetails();
 
   // Initialise all the button Status Indexes to 0
   InitialiseButtons();
@@ -5587,11 +7750,18 @@ int main(int argc, char **argv)
   Define_Menu16();
   Define_Menu17();
   Define_Menu18();
+  Define_Menu19();
 
   Define_Menu21();
   Define_Menu22();
   Define_Menu23();
   Define_Menu24();
+  Define_Menu26();
+  Define_Menu27();
+  Define_Menu28();
+
+  Define_Menu41();
+
 
   // Start the button Menu
   Start(wscreen,hscreen);

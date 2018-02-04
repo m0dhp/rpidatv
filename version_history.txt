@@ -1,9 +1,11 @@
-201801220
+201802040
+Major touchscreen menu re-write
 Introduces new gui sub-menus for parameter and config selection
-Major menu rewrite in prep for transverter switching
+Introduces attenuator and transverter switching
+Introduces stored preset configurations
 Initialises spi GPIO ports on GUI start-up
 Corrects ADF4351 and Attenuator spi timing to improve reliability
-Add partial support (Video only) for Logitech C525 and C270 Webcams
+Adds partial support (Video only) for Logitech C525 and C270 Webcams
 
 201801061
 Introduces attenuator option for Portsdown output in SigGen

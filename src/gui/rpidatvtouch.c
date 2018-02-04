@@ -6439,7 +6439,7 @@ void Start_Highlights_Menu15()
 void Define_Menu16()
 {
   int button;
-  //color_t Green;
+  color_t Green;
   color_t Blue;
   color_t LBlue;
   Green.r=0; Green.g=128; Green.b=0;
@@ -7103,7 +7103,6 @@ void Start_Highlights_Menu24()
 void Define_Menu26()
 {
   int button;
-  char SRtext[255];
   color_t Green;
   color_t Blue;
   color_t LBlue;

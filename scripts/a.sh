@@ -644,14 +644,14 @@ fi
         # No code for beeps here
         if [ "$AUDIO_CARD" == 0 ]; then
           $PATHRPI"/ffmpeg" -loglevel $MODE_DEBUG -thread_queue_size 2048 \
-            -f v4l2 -input_format h264 \
+            -f v4l2 -input_format h264 -video_size 720x576 \
             -i /dev/video0 \
             -framerate 25 -video_size 720x576 -c:v h264_omx -b:v 576k \
             -g 25 \
             -f flv $STREAM_URL/$STREAM_KEY &
         else
           $PATHRPI"/ffmpeg" -loglevel $MODE_DEBUG -itsoffset "$ITS_OFFSET" \
-            -f v4l2 -input_format h264 \
+            -f v4l2 -input_format h264 -video_size 720x576 \
             -i /dev/video0 -thread_queue_size 2048 \
             -f alsa -ac $AUDIO_CHANNELS -ar $AUDIO_SAMPLE \
             -i hw:$AUDIO_CARD_NUMBER,0 \

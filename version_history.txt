@@ -1,10 +1,11 @@
-201802040
+201802041
 Major touchscreen menu re-write
 Introduces new gui sub-menus for parameter and config selection
 Introduces attenuator and transverter switching
 Introduces stored preset configurations
 Initialises spi GPIO ports on GUI start-up
 Corrects ADF4351 and Attenuator spi timing to improve reliability
+Corrects FileTS failure to cease transmitting 
 Adds partial support (Video only) for Logitech C525 and C270 Webcams
 
 201801220

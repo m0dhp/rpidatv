@@ -841,35 +841,38 @@ void AdjustFreq(int button)
     DisplayFreq = SourceLowerFreq;
   }
 
-  // Set the freq here
+  // Set the freq here if output active
 
-  if (strcmp(osctxt, "express")==0)
+  if (OutputStatus == 1)
   {
-    strcpy(ExpressCommand, "echo \"set freq ");
-    snprintf(FreqText, 12, "%lld", DisplayFreq);
-    strcat(ExpressCommand, FreqText);
-    strcat(ExpressCommand, "\" >> /tmp/expctrl" );
-    system(ExpressCommand);
-  }
-
-  if (strcmp(osctxt, "portsdown")==0)
-  {
-    if (ModOn == 0)
+    if (strcmp(osctxt, "express")==0)
     {
-      adf4351On(3); // change adf freq at level 3
+      strcpy(ExpressCommand, "echo \"set freq ");
+      snprintf(FreqText, 12, "%lld", DisplayFreq);
+      strcat(ExpressCommand, FreqText);
+      strcat(ExpressCommand, "\" >> /tmp/expctrl" );
+      system(ExpressCommand);
     }
-    else
-    {
-      adf4351On(0); // change adf freq at level 0
-    }
-  }
 
-  if (strcmp(osctxt, "adf4351")==0)
-  {
-    adf4351On(level); // change adf freq at set level
+    if (strcmp(osctxt, "portsdown")==0)
+    {
+      if (ModOn == 0)
+      {
+        adf4351On(3); // change adf freq at level 3
+      }
+      else
+      {
+        adf4351On(0); // change adf freq at level 0
+      }
+    }
+
+    if (strcmp(osctxt, "adf4351")==0)
+    {
+      adf4351On(level); // change adf freq at set level
+    }
+    // Change the band if required
+    ResetBandGPIOs();
   }
-  // Change the band if required
-  ResetBandGPIOs();
 }
 
 void CalcOPLevel()

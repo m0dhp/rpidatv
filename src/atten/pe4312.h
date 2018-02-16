@@ -24,6 +24,9 @@
 #define PE4312_MAX_ATTENUATION	    31.5 	// dB
 #define PE4312_DISPLAY_NAME     "PE43x2"
 
+// Set time to wait for signals to settle after each control line state change
+#define PE4312_SLEEP                100        // us
+
 
 /******************************************************************************/
 /************************ Types Definitions ***********************************/
